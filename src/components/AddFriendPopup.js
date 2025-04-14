@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import styled from 'styled-components';
 import User from '../models/user';
 
 const dummyUsers = [
@@ -17,20 +18,28 @@ const AddFriendPopup = ({ onClose }) => {
   };
 
   const handleAdd = () => {
-    alert(`${searchResult.name}님을 친구로 추가했습니다!`);
-    onClose();
+    alert(`친구추가: 아직 구현중;;`);
   };
 
   return (
     <div style={{
-      border: '1px solid #ccc',
       borderRadius: '8px',
       padding: '20px',
       backgroundColor: '#fff',
-      width: '100%',
+      width: '40%',
+      border: '1px solid #ccc'
     }}>
+      <button 
+      style={{
+      float: 'right',
+      border: 'none',
+      backgroundColor:'white'
+      }}
+      onClick={onClose}>X</button>
       <h3>친구 추가</h3>
-      <input
+
+    <Container>
+    <input
         type="text"
         placeholder="이메일로 검색"
         value={emailInput}
@@ -38,6 +47,7 @@ const AddFriendPopup = ({ onClose }) => {
         style={{ width: '100%', padding: '8px', marginBottom: '12px' }}
       />
       <button onClick={handleSearch} style={{ marginBottom: '16px' }}>검색</button>
+      </Container>
 
       {searchResult ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -59,3 +69,9 @@ const AddFriendPopup = ({ onClose }) => {
 };
 
 export default AddFriendPopup;
+
+const Container = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;

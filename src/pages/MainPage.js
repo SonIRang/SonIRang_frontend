@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import User from '../models/user';
 import AddFriendPopup from '../components/AddFriendPopup';
 import FriendList from '../components/FriendList';
+import FriendProfilePopup from '../components/FriendProfilePopup';
 
 function MainPage() {
   // 여기서 DB에서 친구 목록 불러오기 예정
@@ -23,11 +24,27 @@ function MainPage() {
   ];
 
   const [search, setSearch] = useState('');
-  const [showAddPopup, setShowAddPopup] = useState(false);
+  const [popupType, setPopupType] = useState(null);
+  const [selectedFriend, setSelectedFriend] = useState(null);
 
   const filteredFriends = dummyFriends.filter(friend =>
     friend.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const openAddFriendPopup = () => {
+    setPopupType('addFriend');
+    setSelectedFriend(null);
+  };
+
+  const openProfilePopup = (friend) => {
+    setPopupType('profile');
+    setSelectedFriend(friend);
+  };
+
+  const closePopup = () => {
+    setPopupType(null);
+    setSelectedFriend(null);
+  };
 
   return (
     <Container>
@@ -35,46 +52,48 @@ function MainPage() {
         <Logo src="/logo-title.png" alt="Logo" style={{height:'60px'}}/>
         <ProfileImage src="/profile.png" alt="User Profile" />
       </Header>
-
-      <LeftPanel>
-        <h2>Friends</h2>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <input
-            type="text"
-            placeholder="친구 이름 검색"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '200px',
-              height: '40px',
-              padding: ' 0 15px',
-              margin: '0px',
-              borderRadius: '4px',
-              border: '0px',
-            }}
-          />
-          <button
-            onClick={() => setShowAddPopup(true)}
-            style={{
-              width: '60px',
-              height: '40px',
-              backgroundColor: '#CA9CC3',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            <img src='/btnNewFriend.png' />
-          </button>
-      </div>
-    {filteredFriends.length > 0 ? (
-        <FriendList friends={filteredFriends} />) : (
-    <p style={{ color: '#999', textAlign: 'center', marginTop: '20px' }}> 검색 결과가 없습니다. </p>
-  )}
-      </LeftPanel>
-      <RightPanel>
-        {showAddPopup && <AddFriendPopup onClose={() => setShowAddPopup(false)} />}
-      </RightPanel>
+      <MainContainer>
+        <LeftPanel>
+          <h2>친구 목록</h2>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <input type="text"
+              placeholder="친구 이름 검색"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                width: '100%',
+                height: '40px',
+                padding: ' 0 15px',
+                margin: '0px',
+                borderRadius: '4px',
+                border: '0px',
+              }}
+              />
+            <button onClick={() => openAddFriendPopup(true)}
+              style={{
+                width: '60px',
+                height: '40px',
+                backgroundColor: '#CA9CC3',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+              >
+              <img src='/btnNewFriend.png' />
+            </button>
+          </div>
+          {filteredFriends.length > 0 ? (<FriendList friends={filteredFriends}
+          onFriendClick={openProfilePopup} />) : (
+            <p style={{ color: '#999', textAlign: 'center', marginTop: '20px' }}> 검색 결과가 없습니다. </p>
+          )}
+        </LeftPanel>
+        <RightPanel>
+        {popupType === 'addFriend' && <AddFriendPopup onClose={closePopup} />}
+        {popupType === 'profile' && selectedFriend && (
+          <FriendProfilePopup friend={selectedFriend} onClose={closePopup} />
+        )}
+        </RightPanel>
+      </MainContainer>
     </Container>
   );
 }
@@ -90,11 +109,15 @@ const Container = styled.div`
 
 const Header = styled.header`
   height: 80px;
-  background-color: #f5f5f5;
+  background-color:rgb(255, 255, 255);
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
+`;
+
+const MainContainer = styled.div`
+  display: flex;
 `;
 
 const Logo = styled.img`
@@ -108,9 +131,10 @@ const ProfileImage = styled.img`
 `;
 
 const LeftPanel = styled.div`
-  width: 300px;
+  width: 25%;
   background-color: #F2F2F7;
-  padding: 20px;
+  margin: 10px;
+  padding: 0 30px;
 `;
 
 const RightPanel = styled.div`

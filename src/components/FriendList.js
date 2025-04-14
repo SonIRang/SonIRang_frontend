@@ -1,16 +1,17 @@
-// src/components/FriendList.js
 import React from 'react';
 
-function FriendList({ friends }) {
+function FriendList({ friends, onFriendClick }) {
   return (
     <ul>
       {friends.map((friend, index) => (
         <li
           key={index}
+          onClick={() => onFriendClick(friend)}
           style={{
             display: 'flex',
             alignItems: 'center',
             marginBottom: '12px',
+            cursor: 'pointer',
           }}
         >
           <img
