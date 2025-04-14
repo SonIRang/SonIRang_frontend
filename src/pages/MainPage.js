@@ -61,21 +61,22 @@ function MainPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
-                width: '100%',
+                width: '70%',
                 height: '40px',
                 padding: ' 0 15px',
                 margin: '0px',
-                borderRadius: '4px',
+                borderRadius: '10px',
                 border: '0px',
               }}
               />
             <button onClick={() => openAddFriendPopup(true)}
               style={{
-                width: '60px',
+                width: '70px',
                 height: '40px',
                 backgroundColor: '#CA9CC3',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '10px',
+                paddingLeft: '5px',
                 cursor: 'pointer',
               }}
               >
@@ -134,7 +135,7 @@ const LeftPanel = styled.div`
   width: 25%;
   background-color: #F2F2F7;
   margin: 10px;
-  padding: 0 30px;
+  padding: 20px;
 `;
 
 const RightPanel = styled.div`
