@@ -1,6 +1,8 @@
 import React,  { useState } from 'react';
 import styled from 'styled-components';
 import User from '../models/user';
+import AddFriendPopup from '../components/AddFriendPopup';
+import FriendList from '../components/FriendList';
 
 function MainPage() {
   // 여기서 DB에서 친구 목록 불러오기 예정
@@ -21,6 +23,7 @@ function MainPage() {
   ];
 
   const [search, setSearch] = useState('');
+  const [showAddPopup, setShowAddPopup] = useState(false);
 
   const filteredFriends = dummyFriends.filter(friend =>
     friend.name.toLowerCase().includes(search.toLowerCase())
@@ -35,55 +38,42 @@ function MainPage() {
 
       <LeftPanel>
         <h2>Friends</h2>
-        <input
-        type="text"
-        placeholder="친구 이름 검색"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        style={{
-          padding: '8px',
-          width: '100%',
-          marginBottom: '16px',
-          borderRadius: '4px',
-          border: '1px solid #ccc',
-        }}
-      />
-    {filteredFriends.length > 0 ? (
-      <ul>
-        {filteredFriends.map((friend, index) => (
-          <li
-            key={index}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <input
+            type="text"
+            placeholder="친구 이름 검색"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: '12px',
+              width: '200px',
+              height: '40px',
+              padding: ' 0 15px',
+              margin: '0px',
+              borderRadius: '4px',
+              border: '0px',
+            }}
+          />
+          <button
+            onClick={() => setShowAddPopup(true)}
+            style={{
+              width: '60px',
+              height: '40px',
+              backgroundColor: '#CA9CC3',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
             }}
           >
-            <img
-              src={friend.profileImage || '/profile.png'}
-              alt={friend.name}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                marginRight: '12px',
-              }}
-            />
-            <div>
-              <div style={{ fontWeight: 'bold' }}>{friend.name}</div>
-              <div style={{ fontSize: '0.9rem', color: '#888' }}>
-                최근 통화일:{' '}
-                {friend.callHistory?.[friend.callHistory.length - 1] || '없음'}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>) : (
+            <img src='/btnNewFriend.png' />
+          </button>
+      </div>
+    {filteredFriends.length > 0 ? (
+        <FriendList friends={filteredFriends} />) : (
     <p style={{ color: '#999', textAlign: 'center', marginTop: '20px' }}> 검색 결과가 없습니다. </p>
   )}
       </LeftPanel>
       <RightPanel>
-        {/* 팝업창 뜰 곳 */}
+        {showAddPopup && <AddFriendPopup onClose={() => setShowAddPopup(false)} />}
       </RightPanel>
     </Container>
   );
@@ -119,11 +109,12 @@ const ProfileImage = styled.img`
 
 const LeftPanel = styled.div`
   width: 300px;
-  background-color: #f0f0f0;
+  background-color: #F2F2F7;
   padding: 20px;
 `;
 
 const RightPanel = styled.div`
+  width: 300px;
   flex: 1;
   background-color: #fff;
 `;

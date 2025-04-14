@@ -4,7 +4,7 @@ class User {
       name = '',
       callHistory = null,
       email = '',
-      bio = '',
+      bio = null,
     }) {
       this.profileImage = profileImage; // string (이미지 경로 or URL), null 가능
       this.name = name;                 // string
