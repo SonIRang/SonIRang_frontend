@@ -48,7 +48,8 @@ function MainPage() {
           border: '1px solid #ccc',
         }}
       />
-<ul>
+    {filteredFriends.length > 0 ? (
+      <ul>
         {filteredFriends.map((friend, index) => (
           <li
             key={index}
@@ -77,7 +78,9 @@ function MainPage() {
             </div>
           </li>
         ))}
-      </ul>
+      </ul>) : (
+    <p style={{ color: '#999', textAlign: 'center', marginTop: '20px' }}> 검색 결과가 없습니다. </p>
+  )}
       </LeftPanel>
       <RightPanel>
         {/* 팝업창 뜰 곳 */}
