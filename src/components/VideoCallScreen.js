@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 
 const VideoCallScreen = () => {
   const localVideoRef = useRef(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(true);
   const [stream, setStream] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // 컴포넌트 언마운트 시 카메라 정리
@@ -72,11 +74,20 @@ const VideoCallScreen = () => {
 
         ) : ( //카메라 끄기
           <img src="/camera-off.png"
-            onClick={stopCamera} 
-            />
+            onClick={stopCamera}
+          />
 
         )}
       </div>
+
+      {/* 통화 종료 버튼 */}
+      <img
+        src="/endcall.png"
+        alt="통화 종료"
+        onClick={() => navigate('/')}
+        className="mt-6 w-12 h-12 cursor-pointer hover:opacity-80"
+      />
+
     </div>
   );
 };

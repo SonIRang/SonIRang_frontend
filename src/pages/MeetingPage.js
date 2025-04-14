@@ -1,10 +1,10 @@
 // src/pages/MeetingPage.js
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import VideoCallScreen from "../components/VideoCallScreen";
 
 const MeetingPage = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
@@ -14,12 +14,12 @@ const MeetingPage = () => {
       <VideoCallScreen />
 
       {/* 통화 종료 버튼 */}
-      <img
+      {/* <img
         src="/endcall.png"
         alt="통화 종료"
         onClick={() => navigate('/')}
         className="mt-6 w-12 h-12 cursor-pointer hover:opacity-80"
-      />
+      /> */}
     </div>
   );
 
