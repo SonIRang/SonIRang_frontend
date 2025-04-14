@@ -72,7 +72,8 @@ const VideoCallScreen = () => {
 
         ) : ( //카메라 끄기
           <img src="/camera-off.png"
-            onClick={stopCamera} />
+            onClick={stopCamera} 
+            />
 
         )}
       </div>
