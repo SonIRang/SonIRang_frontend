@@ -2,19 +2,6 @@ import React from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 
-const BackgroundDiv = styled.div`
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-image: url("/sign-bg.png");
-  background-color: rgba(185, 207, 227, 0.4);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-`;
-
 function SignupPage() {
   const navigate = useNavigate();
 
@@ -183,3 +170,17 @@ function SignupPage() {
 }
 
 export default SignupPage;
+
+
+const BackgroundDiv = styled.div`
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: url("/sign-bg.png");
+  background-color: rgba(185, 207, 227, 0.4);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+`;
