@@ -3,9 +3,23 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../components/ToggleSwitch";
 
-
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [id, setId] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClearId = () => {
+    setId("");
+  };
+
+  const handleMouseEnter = () => {
+    setShowPassword(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowPassword(false);
+  };
 
   return (
     <BackgroundDiv>
@@ -42,9 +56,8 @@ const LoginPage = () => {
           </div>
 
           <label style={{ padding: "10px" }}>아이디</label>
-          <input
-            type="email"
-            placeholder="아이디를 입력하세요"
+          <div
+            class="id_input"
             style={{
               height: "48px",
               width: "368px",
@@ -52,13 +65,37 @@ const LoginPage = () => {
               color: "#808080",
               border: "none",
               borderRadius: "6px",
+              boxSizing: "border-box",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
             }}
-          />
+          >
+            <input
+              type="email"
+              placeholder="아이디를 입력하세요"
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+              style={{
+                height: "44px",
+                width: "320px",
+                backgroundColor: "#F9F9F9",
+                color: "#808080",
+                border: "none",
+                borderRadius: "6px",
+              }}
+            />
+            <img
+              src="./id-clear-icon.png"
+              alt="clear"
+              className="clear-icon"
+              onClick={handleClearId}
+            />
+          </div>
 
           <label style={{ padding: "10px" }}>비밀번호</label>
-          <input
-            type="text"
-            placeholder="비밀번호를 입력하세요"
+          <div
+            class="id_pwword"
             style={{
               height: "48px",
               width: "368px",
@@ -66,16 +103,41 @@ const LoginPage = () => {
               color: "#808080",
               border: "none",
               borderRadius: "6px",
+              boxSizing: "border-box",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
             }}
-          />
+          >
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="비밀번호를 입력하세요"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                height: "44px",
+                width: "320px",
+                backgroundColor: "#F9F9F9",
+                color: "#808080",
+                border: "none",
+                borderRadius: "6px",
+              }}
+            />
+            <img
+              src="./pw-watch-icon.png"
+              alt="watch PW"
+              className="watch-icon"
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+            />
+          </div>
 
           <div className="login-options">
-            <ToggleSwitch style={{ height:"20px", width: "40px"}} />
-            <label style={{paddingLeft:"8px"}}>
-              자동 로그인
-            </label>
-            <a href="#"
-              style={{color: "#CA9CC3"}}>비밀번호를 잊으셨나요?</a>
+            <ToggleSwitch style={{ height: "20px", width: "40px" }} />
+            <label style={{ paddingLeft: "8px" }}>자동 로그인</label>
+            <a href="#" style={{ color: "#CA9CC3" }}>
+              비밀번호를 잊으셨나요?
+            </a>
           </div>
 
           <button
