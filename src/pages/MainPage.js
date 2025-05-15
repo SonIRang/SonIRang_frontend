@@ -4,6 +4,7 @@ import User from '../models/user';
 import AddFriendPopup from '../components/AddFriendPopup';
 import FriendList from '../components/FriendList';
 import FriendProfilePopup from '../components/FriendProfilePopup';
+import MyProfilePopup from '../components/MyProfilePopup';
 
 function MainPage() {
   // 여기서 DB에서 친구 목록 불러오기 예정
@@ -50,7 +51,11 @@ function MainPage() {
     <Container>
       <Header>
         <Logo src="/logo-title.png" alt="Logo" style={{height:'60px'}}/>
-        <ProfileImage src="/profile.png" alt="User Profile" />
+        <ProfileImage
+          src="/profile.png"
+          alt="User Profile"
+          onClick={() => setPopupType('myProfile')}
+        />
       </Header>
       <MainContainer>
         <LeftPanel>
@@ -80,7 +85,7 @@ function MainPage() {
                 cursor: 'pointer',
               }}
               >
-              <img src='/btnNewFriend.png' />
+              <img alt='친구추가' src='/btnNewFriend.png'/>
             </button>
           </div>
           {filteredFriends.length > 0 ? (<FriendList friends={filteredFriends}
@@ -89,6 +94,7 @@ function MainPage() {
           )}
         </LeftPanel>
         <RightPanel>
+        {popupType === 'myProfile' && <MyProfilePopup onClose={closePopup} />}
         {popupType === 'addFriend' && <AddFriendPopup onClose={closePopup} />}
         {popupType === 'profile' && selectedFriend && (
           <FriendProfilePopup friend={selectedFriend} onClose={closePopup} />
