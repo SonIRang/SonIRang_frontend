@@ -1,25 +1,35 @@
 import React from 'react';
 import styled from 'styled-components';
 
-const MyProfilePopup = ({ onClose }) => {
+const MyProfilePopup = ({ user, onClose }) => {
   return (
     <PopupContainer>
       <CloseButton onClick={onClose}>×</CloseButton>
-      <img src="/profile.png" alt="My Profile" style={{ width: '100px', borderRadius: '50%' }} />
-      <h2>유시은</h2>
-      <p><strong>Email:</strong> sieun@example.com</p>
-      <p><strong>소개:</strong> 안녕하세요! 저는 개발을 좋아합니다.</p>
+      <PopupImage
+        src={user.profileImage && user.profileImage !== "null" ? user.profileImage : "/profile.png"}
+        alt="My Profile"
+      />
+      <UserName>{user.name}</UserName>
+      <p><strong>Email:</strong> {user.email}</p>
+      <p><strong>소개:</strong> {user.bio}</p>
     </PopupContainer>
   );
 };
 
 export default MyProfilePopup;
 
+// 스타일 정의
 const PopupContainer = styled.div`
   width: 40%;
   padding: 20px;
   background-color: white;
   border: 1px solid #ccc;
+  text-align: center;
+`;
+
+const PopupImage = styled.img`
+  width: 100px;
+  border-radius: 50%;
 `;
 
 const CloseButton = styled.button`
@@ -28,4 +38,8 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
+`;
+
+const UserName = styled.h2`
+  margin-top: 10px;
 `;
