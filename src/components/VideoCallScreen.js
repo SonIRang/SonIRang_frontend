@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 const VideoCallScreen = () => {
   const localVideoRef = useRef(null);
@@ -12,7 +12,7 @@ const VideoCallScreen = () => {
     // 컴포넌트 언마운트 시 카메라 정리
     return () => {
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       }
     };
   }, [stream]);
@@ -34,7 +34,7 @@ const VideoCallScreen = () => {
 
   const stopCamera = () => {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       setStream(null);
       setIsCameraOn(false);
       setIsMicOn(false);
@@ -43,7 +43,7 @@ const VideoCallScreen = () => {
 
   const toggleMic = () => {
     if (stream) {
-      stream.getAudioTracks().forEach(track => {
+      stream.getAudioTracks().forEach((track) => {
         track.enabled = !track.enabled;
         setIsMicOn(track.enabled);
       });
@@ -51,48 +51,43 @@ const VideoCallScreen = () => {
   };
 
   return (
-    <div className="flex flex-col justify-center p-4">
-      <h2 className="text-xl font-bold mb-4">영상통화 화면</h2>
-      <video
-        ref={localVideoRef}
-        autoPlay
-        playsInline
-        muted
-        className="w-full max-w-md rounded-2xl shadow-lg border border-gray-300 bg-gray-200"
-      />
-
-
-      <div className="flex flex-col items-center gap-4 mt-4">
-        <img
-          src={isMicOn ? "/speak-on.png" : "/speak-off.png"}
-          alt="마이크 상태"
-          className="w-full h-full object-contain"
+    <MainContainer>
+      <div className="flex flex-col justify-center p-4">
+        <h2 className="text-xl font-bold mb-4">영상통화 화면</h2>
+        <video
+          ref={localVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full max-w-md rounded-2xl shadow-lg border border-gray-300 bg-gray-200"
         />
 
-        <div className="mt-4 space-x-2">
-          {!isCameraOn ? (//카메라 켜기
-            <img src="/camera-on.png"
-              onClick={startCamera} />
+        <div className="flex flex-col items-center gap-4 mt-4">
+          <img
+            src={isMicOn ? "/speak-on.png" : "/speak-off.png"}
+            alt="마이크 상태"
+            className="w-full h-full object-contain"
+          />
 
-          ) : ( //카메라 끄기
-            <img src="/camera-off.png"
-              onClick={stopCamera}
-            />
+          <div className="mt-4 space-x-2">
+            {!isCameraOn ? ( //카메라 켜기
+              <img src="/camera-on.png" onClick={startCamera} />
+            ) : (
+              //카메라 끄기
+              <img src="/camera-off.png" onClick={stopCamera} />
+            )}
+          </div>
 
-          )}
+          {/* 통화 종료 버튼 */}
+          <img
+            src="/endcall.png"
+            alt="통화 종료"
+            onClick={() => navigate("/")}
+            className="mt-6 w-12 h-12 cursor-pointer hover:opacity-80"
+          />
         </div>
-
-        {/* 통화 종료 버튼 */}
-        <img
-          src="/endcall.png"
-          alt="통화 종료"
-          onClick={() => navigate('/')}
-          className="mt-6 w-12 h-12 cursor-pointer hover:opacity-80"
-        />
-
       </div>
-
-    </div>
+    </MainContainer>
   );
 };
 
