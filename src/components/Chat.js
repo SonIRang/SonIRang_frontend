@@ -1,8 +1,19 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 
-// Chat.js
-const ChatWindow = ({ isOpen, toggleChat }) => {
+function ChatWindow({ isOpen, toggleChat }) {
+  const [text, setText] = useState('');
+  const [chat, setChat] = useState([]);
+
+  const handleChatInput = (e) => setText(e.target.value);
+
+  const handleSubmitBtn = () => {
+    if (text.trim() !== '') {
+      setChat([...chat, text]);
+      setText('');
+    }
+  };
+
   return (
     <div>
       {!isOpen && (
@@ -10,27 +21,39 @@ const ChatWindow = ({ isOpen, toggleChat }) => {
           <img src="./chat-open.png" alt="Open Chat" />
         </OpenButton>
       )}
+
       <ChatContainer isOpen={isOpen}>
         <ChatHeader>
           <CloseButton onClick={toggleChat}>
             <img src="./chat-close.png" alt="Close Chat" />
           </CloseButton>
         </ChatHeader>
+
         <ChatBox>
-          <p>메세지</p>
+          {chat.map((msg, idx) => (
+            <div key={idx}>{msg}</div>
+          ))}
         </ChatBox>
+
         <ChatInput>
-          <input type="text" placeholder="메세지를 입력하세요." />
-          <img src="./chat-send.png" alt="Send" width="100" height="40" />
+          <input
+            type="text"
+            value={text}
+            onChange={handleChatInput}
+            placeholder="메세지를 입력하세요."
+          />
+          <button onClick={handleSubmitBtn}>
+            <img src="./chat-send.png" alt="Send" width="100" height="40" />
+          </button>
         </ChatInput>
       </ChatContainer>
     </div>
   );
-};
+}
 
 export default ChatWindow;
 
-// Styled Components
+// Styled Components (기존 코드 유지하면서 오타만 수정)
 const OpenButton = styled.button`
   position: fixed;
   right: 20px;
@@ -48,16 +71,16 @@ const OpenButton = styled.button`
 
 const ChatContainer = styled.div`
   position: fixed;
-  right: ${(props) => (props.isOpen ? "0" : "-500px")};
+  right: ${(props) => (props.isOpen ? "0" : "-40%")};
   top: 0;
   height: 100%;
-  width: 500px;
+  width: 30%;
   background-color: #f2f2f7;
   transition: right 0.3s ease-in-out;
 `;
 
 const ChatHeader = styled.div`
-  hight: 40px;
+  height: 40px;
   background-color: #f2f2f7;
   color: #fff;
   padding-bottom: 35px;
@@ -73,7 +96,7 @@ const CloseButton = styled.button`
   cursor: pointer;
 
   img {
-    width: 40px; /* 크기 조정 가능 */
+    width: 40px;
     height: 40px;
   }
 `;
@@ -98,23 +121,19 @@ const ChatInput = styled.div`
     flex: 1;
     padding: 20px;
     border: none;
-    // width: 460px;
-    // hight: 150px;
     border-radius: 20px;
     outline: none;
   }
 
   button {
-    background-color: #919fc6;
-    color: white;
+    background: none;
     border: none;
-    padding: 10px 10px;
-    border-radius: 10px;
+    padding: 0;
     cursor: pointer;
-    transition: background-color 0.2s;
 
-    &:hover {
-      background-color: #0056b3;
+    img {
+      width: 100px;
+      height: 40px;
     }
   }
 `;
