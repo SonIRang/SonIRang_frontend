@@ -1,7 +1,18 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 
 const MyProfilePopup = ({ user, onClose }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    const confirmed = window.confirm("정말 로그아웃 하시겠어요?");
+    if (confirmed) {
+      localStorage.clear();
+      navigate("/login");
+    }
+  };
+
   return (
     <PopupContainer>
       <CloseButton onClick={onClose}>×</CloseButton>
@@ -12,6 +23,8 @@ const MyProfilePopup = ({ user, onClose }) => {
       <UserName>{user.name}</UserName>
       <p><strong>Email:</strong> {user.email}</p>
       <p><strong>소개:</strong> {user.bio}</p>
+
+      <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton> 
     </PopupContainer>
   );
 };
@@ -25,6 +38,7 @@ const PopupContainer = styled.div`
   background-color: white;
   border: 1px solid #ccc;
   text-align: center;
+  position: relative;
 `;
 
 const PopupImage = styled.img`
@@ -33,7 +47,9 @@ const PopupImage = styled.img`
 `;
 
 const CloseButton = styled.button`
-  float: right;
+  position: absolute;
+  right: 10px;
+  top: 10px;
   font-size: 20px;
   background: none;
   border: none;
@@ -42,4 +58,19 @@ const CloseButton = styled.button`
 
 const UserName = styled.h2`
   margin-top: 10px;
+`;
+
+const LogoutButton = styled.button`
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #CA9CC3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+
+  &:hover {
+    background-color: #b184b1;
+  }
 `;

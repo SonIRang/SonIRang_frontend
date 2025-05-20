@@ -8,7 +8,6 @@ import MyProfilePopup from '../components/MyProfilePopup';
 import { useNavigate } from 'react-router-dom';
 
 function MainPage() {
-
   const navigate = useNavigate();
 
   const username = localStorage.getItem("username");
