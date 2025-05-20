@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../components/ToggleSwitch";
 
-const KAKAO_JS_KEY = "YOUR_KAKAO_JAVASCRIPT_KEY"; // 개발자 센터에서 복사
+const KAKAO_JS_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -74,56 +74,67 @@ const LoginPage = () => {
     checkKakao();
   }, []);
 
-  const loginWithKakao = () => {
+  const loginWithKakao = async() => {
     //SDK확인
     if (!window.Kakao || !window.Kakao.Auth) {
       alert("Kakao SDK가 아직 준비되지 않았습니다.");
       return;
     }
 
-    window.Kakao.Auth.login({
-      scope: "profile_nickname, account_email",
-      success: function (authObj) {
-        console.log("카카오 로그인 성공:", authObj);
+    try {
+      // ✅ 2-1. 로그인 요청
+      const authObj = await new Promise((resolve, reject) => {
+        window.Kakao.Auth.login({
+          scope: "profile_nickname, account_email", // 요청 권한
+          success: resolve,
+          fail: reject,
+        });
+      });
+      console.log("✅ 카카오 로그인 성공:", authObj);
 
+      // ✅ 2-2. 사용자 정보 요청
+      const userInfo = await new Promise((resolve, reject) => {
         window.Kakao.API.request({
           url: "/v2/user/me",
-          success: function (res) {
-            console.log("카카오 사용자 정보:", res);
-
-            // 백엔드에 전송
-            fetch("http://15.164.249.16:8080/get-code", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                kakao_id: res.id,
-                email: res.kakao_account.email,
-                nickname: res.properties.nickname,
-              }),
-            })
-              .then((response) => response.json())
-              .then((data) => {
-                console.log("백엔드 응답:", data);
-                // 토큰 저장 및 이동
-                localStorage.setItem("token", data.token); // 예시
-                alert(`${res.properties.nickname}님 환영합니다!`);
-                navigate("/");
-              })
-              .catch((err) => {
-                console.error("백엔드 통신 오류:", err);
-              });
-          },
-          fail: function (error) {
-            console.error("사용자 정보 요청 실패:", error);
-          },
+          success: resolve,
+          fail: reject,
         });
-      },
-      fail: function (err) {
-        console.error("카카오 로그인 실패:", err);
-      },
-    });
+      });
+      console.log("✅ 사용자 정보:", userInfo);
+
+      // ✅ 3. 사용자 정보 추출
+      const kakao_id = userInfo.id;
+      const email = userInfo.kakao_account?.email || "";
+      const nickname = userInfo.properties?.nickname || "";
+
+      // ✅ 4. 백엔드에 사용자 정보 전송
+      const response = await fetch("http://15.164.249.16:8080/get-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ kakao_id, email, nickname }),
+      });
+
+      // 응답 실패 시 예외
+      if (!response.ok) {
+        throw new Error("백엔드 요청 실패");
+      }
+
+      // ✅ 5. 응답 데이터(JSON) 파싱
+      const data = await response.json();
+      console.log("✅ 백엔드 응답:", data);
+
+      // ✅ 6. 토큰 저장 및 라우팅
+      localStorage.setItem("token", data.token); // 예: JWT 저장
+      alert(`${nickname}님 환영합니다!`);
+      navigate("/"); // 메인 페이지로 이동
+
+    } catch (error) {
+      console.error("❌ 로그인 과정 오류:", error);
+      alert("카카오 로그인 중 문제가 발생했습니다.");
+    }
+    
   };
 
   return (

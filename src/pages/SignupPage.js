@@ -115,7 +115,7 @@ function SignupPage() {
               disabled={isCodeSent}
             />
             {!isCodeSent && (
-              <Button onClick={sendVerificationCode}>인증번호 받기</Button>
+              <Button onClick={() => sendVerificationCode(email)}>인증번호 받기</Button>
             )}
           </Row>
 
