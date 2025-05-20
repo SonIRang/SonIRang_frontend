@@ -79,6 +79,7 @@ const LeftPanel = styled.div`
 const ButtonSide = styled.div`
   hight: 100px;
   display: flex;
+  background-color: F2F2F7;
   flex-direction: low;
   justify-content: center;
   align-items: center;
