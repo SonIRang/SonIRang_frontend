@@ -83,18 +83,19 @@ function MainPage() {
   };
 
   return (
-    <Container>
-      <Header>
-        <Logo src="/logo-title.png" alt="Logo" />
-        <ProfileImage 
-          src={myUser.profileImage && myUser.profileImage !== "null" ? myUser.profileImage : "/profile.png"} 
-          alt="사용자 프로필" 
-          onClick={() => setPopupType('myProfile')} 
-        />
-      </Header>
-      <MainContainer>
+    <MainContainer>
+      <LeftSection>
+        <Header>
+          <Logo src="/title.png" alt="Logo" />
+          <Name><strong>{myUser.name}</strong></Name>
+          <ProfileImage 
+            src={myUser.profileImage && myUser.profileImage !== "null" ? myUser.profileImage : "/profile.png"} 
+            alt="사용자 프로필" 
+            onClick={() => setPopupType('myProfile')} 
+          />
+        </Header>
         <LeftPanel>
-          <Title>친구 목록</Title>
+          <SerchTitle>친구 목록</SerchTitle>
           <SearchContainer>
             <SearchInput
               type="text"
@@ -112,84 +113,113 @@ function MainPage() {
             <NoResultText>검색 결과가 없습니다.</NoResultText>
           )}
         </LeftPanel>
-        <RightPanel>
-          {popupType === 'myProfile' && <MyProfilePopup user={myUser} onClose={closePopup} />}
-          {popupType === 'addFriend' && <AddFriendPopup onClose={closePopup} />}
-          {popupType === 'profile' && selectedFriend && (
-            <FriendProfilePopup friend={selectedFriend} onClose={closePopup} />
-          )}
-        </RightPanel>
-      </MainContainer>
-    </Container>
+      </LeftSection>
+        
+      <RightPanel>
+        {popupType === null && <LogoCenter src="/logo-title-ver2.png" alt="Main Logo" />}
+        {popupType === 'myProfile' && <MyProfilePopup user={myUser} onClose={closePopup} />}
+        {popupType === 'addFriend' && <AddFriendPopup onClose={closePopup} />}
+        {popupType === 'profile' && selectedFriend && (
+          <FriendProfilePopup friend={selectedFriend} onClose={closePopup} />
+        )}
+      </RightPanel>
+    </MainContainer>
   );
 }
 
 export default MainPage;
 
-const Container = styled.div`
-  height: calc(100vh - 80px);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
-`;
-
-const Header = styled.header`
-  height: 80px;
-  background-color: rgb(255, 255, 255);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-`;
-
 const MainContainer = styled.div`
+  height: calc(100vh - 30px);
   display: flex;
   flex: 1;
-  min-width: 0; /* 중요: 자식 요소가 부모 폭 넘는 것을 방지 */
+  margin: 0;
+  padding: 15px;
+`;
+
+const LeftSection = styled.div`
+  width: 30vw;
+  min-width: 300px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 `;
 
 const Logo = styled.img`
-  height: 40px;
+  height: 25px;
+  margin-right: 50px;
 `;
-
 const ProfileImage = styled.img`
   height: 40px;
   width: 40px;
   border-radius: 50%;
   cursor: pointer;
+  
+`;
+const Name = styled.div`
+  width: 70px;
+  text-align: right;
+  color:#CA9CC3;
+  margin-right: 10px;
+`
+const Header = styled.header`
+  height: 80px;
+  width: 70%;
+  background-color: #fff;
+
+  padding: 10px 25px 10px 25px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 `;
 
 const LeftPanel = styled.div`
-  width: 25%;
   background-color: #F2F2F7;
-  margin: 10px;
-  padding: 20px;
-  box-sizing: border-box;
+  border-radius: 20px;
+  width: 70%;
+
+  padding: 25px;
+
   overflow-y: auto;
+  flex: 1;
 `;
 
 const RightPanel = styled.div`
   width: 300px;
   flex: 1;
-  background-color: #fff;
+  background-image: url('/sign-bg.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 `;
 
-const Title = styled.h2`
+const LogoCenter = styled.img`
+  width: 60%;
+  max-width: 400px;
+  object-fit: contain;
+`;
+
+const SerchTitle = styled.h3`
   margin-top: 0;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 `;
 
 const SearchContainer = styled.div`
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
   margin-bottom: 16px;
 `;
 
 const SearchInput = styled.input`
-  width: 70%;
+  width: 78%;
   height: 40px;
-  padding: 0 15px;
+  padding-left: 15px;
   border-radius: 10px;
   border: none;
   outline: none;
@@ -198,7 +228,7 @@ const SearchInput = styled.input`
 `;
 
 const SearchButton = styled.button`
-  width: 70px;
+  width: 60px;
   height: 40px;
   background-color: #CA9CC3;
   border: none;
@@ -207,8 +237,7 @@ const SearchButton = styled.button`
   cursor: pointer;
 
   & > img {
-    width: 24px;
-    height: 24px;
+    width: 20px;
   }
 `;
 
