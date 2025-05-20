@@ -24,169 +24,62 @@ const LoginPage = () => {
   return (
     <BackgroundDiv>
       <LeftPanel>
-        <img
-          src="/login-Frame.png"
-          alt="Login Frame"
-          style={{ height: "100vh" }}
-        />
+        <img src="/login-logo.png" alt="Login Frame" style={{ height: "100vh" }} />
       </LeftPanel>
 
-      <RightPanel
-        style={{
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "#ffffff",
-          gap: "10px",
-          padding: "10px",
-          boxSizing: "border-box",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ width: "368px" }}>
-          <div className="login-header">
+      <RightPanel>
+        <LoginContainer>
+          <LoginHeader>
             <p>
               수화로 연결되는 세상,
               <br />
               소통에 경계는 없다
             </p>
-            <h2 style={{ color: "#CA9CC3" }}>SONIRANG</h2>
-          </div>
+            <h2>SONIRANG</h2>
+          </LoginHeader>
 
-          <label style={{ padding: "10px" }}>아이디</label>
-          <div
-            class="id_input"
-            style={{
-              height: "48px",
-              width: "368px",
-              backgroundColor: "#F9F9F9",
-              color: "#808080",
-              border: "none",
-              borderRadius: "6px",
-              boxSizing: "border-box",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <input
+          <Label>아이디</Label>
+          <InputWrapper>
+            <Input
               type="email"
               placeholder="아이디를 입력하세요"
               value={id}
               onChange={(e) => setId(e.target.value)}
-              style={{
-                height: "44px",
-                width: "320px",
-                backgroundColor: "#F9F9F9",
-                color: "#808080",
-                border: "none",
-                borderRadius: "6px",
-              }}
             />
-            <img
-              src="./id-clear-icon.png"
-              alt="clear"
-              className="clear-icon"
-              onClick={handleClearId}
-            />
-          </div>
+            <Icon src="./id-clear-icon.png" alt="clear" onClick={handleClearId} />
+          </InputWrapper>
 
-          <label style={{ padding: "10px" }}>비밀번호</label>
-          <div
-            class="id_pwword"
-            style={{
-              height: "48px",
-              width: "368px",
-              backgroundColor: "#F9F9F9",
-              color: "#808080",
-              border: "none",
-              borderRadius: "6px",
-              boxSizing: "border-box",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <input
+          <Label>비밀번호</Label>
+          <InputWrapper>
+            <Input
               type={showPassword ? "text" : "password"}
               placeholder="비밀번호를 입력하세요"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={{
-                height: "44px",
-                width: "320px",
-                backgroundColor: "#F9F9F9",
-                color: "#808080",
-                border: "none",
-                borderRadius: "6px",
-              }}
             />
-            <img
+            <Icon
               src="./pw-watch-icon.png"
               alt="watch PW"
-              className="watch-icon"
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
             />
-          </div>
+          </InputWrapper>
 
-          <div className="login-options">
+          <LoginOptions>
             <ToggleSwitch style={{ height: "20px", width: "40px" }} />
-            <label style={{ paddingLeft: "8px" }}>자동 로그인</label>
-            <a href="#" style={{ color: "#CA9CC3" }}>
-              비밀번호를 잊으셨나요?
-            </a>
-          </div>
+            <AutoLoginLabel>자동 로그인</AutoLoginLabel>
+            <ForgotPassword href="#">비밀번호를 잊으셨나요?</ForgotPassword>
+          </LoginOptions>
 
-          <button
-            style={{
-              height: "40px",
-              width: "368px",
-              padding: "10px",
-              gap: "10px",
-              backgroundColor: "#CA9CC3",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              marginTop: "20px",
-            }}
-            onClick={() => navigate("/")}
-          >
-            로그인
-          </button>
+          <LoginButton onClick={() => navigate("/")}>로그인</LoginButton>
+          <SignupButton onClick={() => navigate("/signup")}>회원가입</SignupButton>
+        </LoginContainer>
 
-          <button
-            style={{
-              height: "40px",
-              width: "368px",
-              padding: "10px",
-              gap: "10px",
-              backgroundColor: "#FFFFFF",
-              color: "#CA9CC3",
-              border: "1px solid #CA9CC3 ",
-              borderRadius: "6px",
-              cursor: "pointer",
-              marginTop: "5px",
-            }}
-            onClick={() => navigate("/signup")}
-          >
-            회원가입
-          </button>
-        </div>
-
-        <p className="login-footer">소셜아이디로 간편하게 로그인</p>
-        <div className="social-icons">
+        <FooterText>소셜아이디로 간편하게 로그인</FooterText>
+        <SocialIcons>
           <img src="./kakao-icon.png" alt="Kakao" />
-        </div>
+        </SocialIcons>
       </RightPanel>
-
-      {/* <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-semibold mb-4">로그인</h1>
-        <p onClick={() => navigate("/signup")}> 회원가입 </p>
-      </div> */}
     </BackgroundDiv>
   );
 };
@@ -194,8 +87,8 @@ const LoginPage = () => {
 export default LoginPage;
 
 const BackgroundDiv = styled.div`
-  width: 100vw;
-  height: 100vh;
+  height: calc(100vh - 80px);
+  margin: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -208,11 +101,113 @@ const BackgroundDiv = styled.div`
 `;
 
 const LeftPanel = styled.div`
-  width, hight: 100%;
+  width: 100%;
+  height: 100%;
 `;
 
 const RightPanel = styled.div`
-  hight: "100vh";
-  flex: 1;
-  background-color: #fff;
+  width: 100vw;
+  height: calc(100vh - 80px);
+  background-color: #ffffff;
+  gap: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+`;
+
+const LoginContainer = styled.div`
+  width: 368px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const LoginHeader = styled.div`
+  margin-bottom: 20px;
+  p {
+    margin: 0;
+  }
+  h2 {
+    color: #ca9cc3;
+  }
+`;
+
+const Label = styled.label`
+  padding: 10px;
+`;
+
+const InputWrapper = styled.div`
+  height: 48px;
+  width: 368px;
+  background-color: #f9f9f9;
+  color: #808080;
+  border: none;
+  border-radius: 6px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+`;
+
+const Input = styled.input`
+  height: 44px;
+  width: 320px;
+  background-color: #f9f9f9;
+  color: #808080;
+  border: none;
+  border-radius: 6px;
+`;
+
+const Icon = styled.img`
+  cursor: pointer;
+`;
+
+const LoginOptions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+`;
+
+const AutoLoginLabel = styled.label`
+  padding-left: 8px;
+`;
+
+const ForgotPassword = styled.a`
+  color: #ca9cc3;
+`;
+
+const LoginButton = styled.button`
+  height: 40px;
+  width: 368px;
+  padding: 10px;
+  background-color: #ca9cc3;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 20px;
+`;
+
+const SignupButton = styled.button`
+  height: 40px;
+  width: 368px;
+  padding: 10px;
+  background-color: #ffffff;
+  color: #ca9cc3;
+  border: 1px solid #ca9cc3;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 5px;
+`;
+
+const FooterText = styled.p`
+  margin-top: 20px;
+`;
+
+const SocialIcons = styled.div`
+  margin-top: 10px;
 `;

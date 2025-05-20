@@ -1,22 +1,19 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 
-const ChatWindow = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const toggleChat = () => {
-    setIsOpen(!isOpen);
-  };
-
+// Chat.js
+const ChatWindow = ({ isOpen, toggleChat }) => {
   return (
     <div>
-      <OpenButton onClick={toggleChat}>
-        <img src="./chat-open.png" alt="Open Chat" />
-      </OpenButton>
+      {!isOpen && (
+        <OpenButton onClick={toggleChat}>
+          <img src="./chat-open.png" alt="Open Chat" />
+        </OpenButton>
+      )}
       <ChatContainer isOpen={isOpen}>
         <ChatHeader>
           <CloseButton onClick={toggleChat}>
-            <img src="./chat-close.png" alt="Open Chat" />
+            <img src="./chat-close.png" alt="Close Chat" />
           </CloseButton>
         </ChatHeader>
         <ChatBox>
@@ -55,14 +52,15 @@ const ChatContainer = styled.div`
   top: 0;
   height: 100%;
   width: 500px;
-  background-color: #F2F2F7;
+  background-color: #f2f2f7;
   transition: right 0.3s ease-in-out;
 `;
 
 const ChatHeader = styled.div`
-  background-color: #F2F2F7;
+  hight: 40px;
+  background-color: #f2f2f7;
   color: #fff;
-  padding: 10px;
+  padding-bottom: 35px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -75,7 +73,7 @@ const CloseButton = styled.button`
   cursor: pointer;
 
   img {
-    width: 40px;  /* 크기 조정 가능 */
+    width: 40px; /* 크기 조정 가능 */
     height: 40px;
   }
 `;
@@ -83,6 +81,7 @@ const CloseButton = styled.button`
 const ChatBox = styled.div`
   padding: 20px;
   height: calc(100% - 120px);
+  background-color: #f2f2f7;
   overflow-y: auto;
 `;
 
@@ -92,7 +91,7 @@ const ChatInput = styled.div`
   position: absolute;
   bottom: 0;
   width: 100%;
-  background-color: #F2F2F7;
+  background-color: #f2f2f7;
   gap: 8px;
 
   input {
@@ -106,7 +105,7 @@ const ChatInput = styled.div`
   }
 
   button {
-    background-color: #919FC6;
+    background-color: #919fc6;
     color: white;
     border: none;
     padding: 10px 10px;
@@ -119,4 +118,3 @@ const ChatInput = styled.div`
     }
   }
 `;
-
