@@ -1,25 +1,35 @@
-import React,  { useState } from 'react';
+import React,  { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import User from '../models/user';
 import AddFriendPopup from '../components/AddFriendPopup';
 import FriendList from '../components/FriendList';
 import FriendProfilePopup from '../components/FriendProfilePopup';
 import MyProfilePopup from '../components/MyProfilePopup';
+import { useNavigate } from 'react-router-dom';
 
 function MainPage() {
-  // 로그인 페이지에서 받아올 예정
-  localStorage.setItem("username", "유시은")
-  localStorage.setItem("useremail", "sieun@example.com")
-  localStorage.setItem("userbio", "저는 개발자입니다!")
-  localStorage.setItem("userprofile", null)
-  // 완성시 여기까지 지워짐
 
+  const navigate = useNavigate();
+
+  const username = localStorage.getItem("username");
+  const useremail = localStorage.getItem("useremail");
+  const userbio = localStorage.getItem("userbio");
+  const userprofile = localStorage.getItem("userprofile");
+  
+  useEffect(() => {
+    // 사용자 정보 없으면 /login으로 리디렉트
+    if (!username || !useremail) {
+      navigate("/login");
+    }
+  }, [navigate]);
+  
   const myUser = new User({
-    profileImage: localStorage.getItem("userprofile"),
-    name: localStorage.getItem("username"),
-    email: localStorage.getItem("useremail"),
-    bio: localStorage.getItem("userbio")
+    profileImage: userprofile,
+    name: username,
+    email: useremail,
+    bio: userbio
   });
+
 
   // 여기서 DB에서 친구 목록 불러오기 예정
   const dummyFriends = [
