@@ -74,66 +74,16 @@ const LoginPage = () => {
     checkKakao();
   }, []);
 
-  const loginWithKakao = async() => {
+  const loginWithKakao = () => {
     //SDK확인
     if (!window.Kakao || !window.Kakao.Auth) {
       alert("Kakao SDK가 아직 준비되지 않았습니다.");
       return;
     }
 
-    try {
-      // ✅ 2-1. 로그인 요청
-      const authObj = await new Promise((resolve, reject) => {
-        window.Kakao.Auth.login({
-          scope: "profile_nickname, account_email", // 요청 권한
-          success: resolve,
-          fail: reject,
-        });
-      });
-      console.log("✅ 카카오 로그인 성공:", authObj);
-
-      // ✅ 2-2. 사용자 정보 요청
-      const userInfo = await new Promise((resolve, reject) => {
-        window.Kakao.API.request({
-          url: "/v2/user/me",
-          success: resolve,
-          fail: reject,
-        });
-      });
-      console.log("✅ 사용자 정보:", userInfo);
-
-      // ✅ 3. 사용자 정보 추출
-      const kakao_id = userInfo.id;
-      const email = userInfo.kakao_account?.email || "";
-      const nickname = userInfo.properties?.nickname || "";
-
-      // ✅ 4. 백엔드에 사용자 정보 전송
-      const response = await fetch("http://15.164.249.16:8080/get-code", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ kakao_id, email, nickname }),
-      });
-
-      // 응답 실패 시 예외
-      if (!response.ok) {
-        throw new Error("백엔드 요청 실패");
-      }
-
-      // ✅ 5. 응답 데이터(JSON) 파싱
-      const data = await response.json();
-      console.log("✅ 백엔드 응답:", data);
-
-      // ✅ 6. 토큰 저장 및 라우팅
-      localStorage.setItem("token", data.token); // 예: JWT 저장
-      alert(`${nickname}님 환영합니다!`);
-      navigate("/"); // 메인 페이지로 이동
-
-    } catch (error) {
-      console.error("❌ 로그인 과정 오류:", error);
-      alert("카카오 로그인 중 문제가 발생했습니다.");
-    }
+    const kakaologinHandler = () => {
+    window.location.href = '';
+  };
     
   };
 
