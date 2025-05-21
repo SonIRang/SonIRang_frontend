@@ -19,7 +19,7 @@ function FriendProfilePopup({ friend, onClose }) {
       <ProfileImage src={friend.profileImage || '/profile.png'} alt={friend.name} />
       <Name>{friend.name}</Name>
       <Email>{friend.email}</Email>
-      <Bio>{friend.bio}</Bio>
+      <Bio>{friend.bio  || "작성된 자기소개가 없습니다."}</Bio>
 
       <SectionTitle>통화 기록</SectionTitle>
       <CallHistoryList>
