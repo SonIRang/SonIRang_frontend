@@ -1,21 +1,28 @@
 import React, { useState, useEffect } from "react";
+import axios from 'axios';
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../components/ToggleSwitch";
 
 //카카오 로그인 키, 로그인화면면
-  const REST_API_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
-  const REDIRECT_URI = "";
-  const kakaolink = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
-
+const KAKAO_JS_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
+const REDIRECT_URI = "http://15.164.249.16:8080/login/oauth/kakao";
+const link = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_JS_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
+const code = window.location.search;
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [name,setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  
+  useEffect(() => {
+    fetch("http://15.164.249.16:8080")
+      .then((response) => response.json()) // 혹은 response.json()
+      .catch((error) => console.error("API 호출 실패:", error));
+  }, []);
+
   //일반 로그인
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -77,32 +84,12 @@ const LoginPage = () => {
   };
 
   // 카카오 로그인
-  useEffect(() => {
-    const checkKakao = () => {
-      if (window.Kakao) {
-        if (!window.Kakao.isInitialized()) {
-          window.Kakao.init(KAKAO_JS_KEY);
-          console.log("✅ Kakao SDK Initialized");
-        }
-      } else {
-        setTimeout(checkKakao, 100); // SDK가 로드될 때까지 재시도
-      }
-    };
-
-    checkKakao();
-  }, []);
-
-  const loginWithKakao = () => {
-    //SDK확인
-    if (!window.Kakao || !window.Kakao.Auth) {
-      alert("Kakao SDK가 아직 준비되지 않았습니다.");
-      return;
-    }
-
-    const kakaologinHandler = () => {
-      window.location.href = link;
-    };
+  const kakaologinHandler = () => {
+    window.location.href = link;
+    navigate('/');
   };
+
+  
 
   return (
     <BackgroundDiv>
@@ -174,7 +161,7 @@ const LoginPage = () => {
             src="./kakao-icon.png"
             alt="Kakao"
             style={{ cursor: "pointer" }}
-            onClick={loginWithKakao}
+            onClick={kakaologinHandler}
           />
         </SocialIcons>
       </RightPanel>
