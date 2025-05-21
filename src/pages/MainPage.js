@@ -1,4 +1,5 @@
 import React,  { useState, useEffect } from 'react';
+import axios from 'axios';
 import styled from 'styled-components';
 import User from '../models/user';
 import AddFriendPopup from '../components/AddFriendPopup';
@@ -29,41 +30,38 @@ function MainPage() {
     bio: userbio
   });
 
+  const [friends, setFriends] = useState([]);
 
-  // 여기서 DB에서 친구 목록 불러오기 예정
-  const dummyFriends = [
-    new User({
-      name: '김수연',
-      callHistory: ['2024-04-11', '2024-04-16'],
-      email: 'sooyeon@example.com',
-      bio: '안녕하세요! 저는 개발을 싫어합니다.',
-    }),
-    new User({
-      name: '김수연',
-      callHistory: ['2024-04-11', '2024-04-16'],
-      email: 'sooyeon@example.com',
-      bio: '안녕하세요! 저는 개발을 싫어합니다.',
-    }),
-    new User({
-      name: '김수연',
-      callHistory: ['2024-04-11', '2024-04-16'],
-      email: 'sooyeon@example.com',
-      bio: '안녕하세요! 저는 개발을 싫어합니다.',
-    }),
-    new User({
-      profileImage: '/profile.png',
-      name: '유시은',
-      callHistory: ['2024-04-01', '2024-04-03'],
-      email: 'sieun@example.com',
-      bio: '안녕하세요! 저는 개발을 좋아합니다.',
-    })
-  ];
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const response = await axios.get('/api/friends/list', {
+          params: { userId: 1 }, // 테스트용 임시 지정
+        });
+
+        const friendData = response.data.data.map(friend => new User({
+          name: friend.nickname,
+          email: friend.email,
+          profileImage: friend.profileImageUrl,
+          // 아직 서버에 구현 안 됨
+          //callHistory: ,
+          // bio: ,
+        }));
+
+        setFriends(friendData);
+      } catch (error) {
+        console.error('친구 목록을 불러오는데 실패했습니다:', error);
+      }
+    };
+
+    fetchFriends();
+  }, []);
 
   const [search, setSearch] = useState('');
   const [popupType, setPopupType] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
 
-  const filteredFriends = dummyFriends.filter(friend =>
+  const filteredFriends = friends.filter(friend =>
     friend.name.toLowerCase().includes(search.toLowerCase())
   );
 
