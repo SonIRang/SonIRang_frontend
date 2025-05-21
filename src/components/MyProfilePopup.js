@@ -1,16 +1,18 @@
-import React from 'react';
+import React from 'react'; 
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 
 const MyProfilePopup = ({ user, onClose }) => {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    const confirmed = window.confirm("정말 로그아웃 하시겠어요?");
-    if (confirmed) {
-      localStorage.clear();
-      navigate("/login");
-    }
+  const handleSettingClick = () => {
+    alert("구현중입니다");
+  };
+
+  const handleEditProfile = () => {
+    alert("구현중입니다");
+    // 추후 프로필 수정 페이지로 연결
+    // navigate("/edit-profile");
   };
 
   return (
@@ -20,11 +22,16 @@ const MyProfilePopup = ({ user, onClose }) => {
         src={user.profileImage && user.profileImage !== "null" ? user.profileImage : "/profile.png"}
         alt="My Profile"
       />
-      <UserName>{user.name}</UserName>
-      <p><strong>Email:</strong> {user.email}</p>
-      <p><strong>소개:</strong> {user.bio}</p>
+      <UserName>
+        {user.name}
+        <SettingIcon onClick={handleSettingClick}>⚙️</SettingIcon>
+      </UserName>
 
-      <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton> 
+      <BioBox>
+        {user.bio && user.bio.trim() !== "" ? user.bio : "작성된 자기소개가 없습니다."}
+      </BioBox>
+
+      <EditButton onClick={handleEditProfile}>프로필 수정하기</EditButton> 
     </PopupContainer>
   );
 };
@@ -33,40 +40,72 @@ export default MyProfilePopup;
 
 // 스타일 정의
 const PopupContainer = styled.div`
-  width: 40%;
-  padding: 20px;
+  width: 400px;
+  padding: 30px 20px;
   background-color: white;
-  border: 1px solid #ccc;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   text-align: center;
   position: relative;
 `;
 
 const PopupImage = styled.img`
-  width: 100px;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
   border-radius: 50%;
+  margin-bottom: 20px;
 `;
 
 const CloseButton = styled.button`
   position: absolute;
-  right: 10px;
-  top: 10px;
-  font-size: 20px;
+  right: 15px;
+  top: 15px;
+  font-size: 30px;
   background: none;
   border: none;
+  color: #CA9CC3;
   cursor: pointer;
 `;
 
 const UserName = styled.h2`
-  margin-top: 10px;
+  margin: 10px 0;
+  font-size: 1.25rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
 `;
 
-const LogoutButton = styled.button`
+const SettingIcon = styled.span`
+  cursor: pointer;
+  font-size: 1rem;
+
+  &:hover {
+    opacity: 0.7;
+  }
+`;
+
+const BioBox = styled.div`
   margin-top: 20px;
-  padding: 10px 20px;
+  padding: 20px;
+  min-height: 100px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  color: #333;
+  font-size: 0.95rem;
+`;
+
+const EditButton = styled.button`
+  margin-top: 30px;
+  padding: 12px 0;
+  width: 100%;
+
   background-color: #CA9CC3;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
+  font-weight: bold;
   cursor: pointer;
   font-size: 1rem;
 
