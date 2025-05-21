@@ -33,6 +33,7 @@ function MainPage() {
   const [friends, setFriends] = useState([]);
 
   useEffect(() => {
+
     const fetchFriends = async () => {
       try {
         const response = await axios.get('/api/friends/list', {

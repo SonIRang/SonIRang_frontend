@@ -1,27 +1,41 @@
 import React, { useState, useEffect } from "react";
-import axios from 'axios';
+import axios from "axios";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../components/ToggleSwitch";
 
-//카카오 로그인 키, 로그인화면면
-const KAKAO_JS_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
-const REDIRECT_URI = "http://15.164.249.16:8080/login/oauth/kakao";
-const link = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_JS_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
-const code = window.location.search;
-
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [name,setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  
   useEffect(() => {
-    fetch("http://15.164.249.16:8080")
-      .then((response) => response.json()) // 혹은 response.json()
-      .catch((error) => console.error("API 호출 실패:", error));
-  }, []);
+    // URL에서 인가 코드 추출
+    const code = new URL(window.location.href).searchParams.get("code");
+console.log("인가 코드:", code);
+    if (code) {
+      // 백엔드 API 호출해서 카카오 토큰 교환 및 로그인 처리 요청
+      axios
+        .get(`http://15.164.249.16:8080/kakao-login?code=${code}`)
+        .then((res) => {
+          // 예) 받은 토큰 localStorage에 저장
+          localStorage.setItem("accessToken", res.data.accessToken);
+          localStorage.setItem("refreshToken", res.data.refreshToken);
+          // 로그인 성공 후 메인 페이지로 이동
+          navigate("/");
+        })
+        .catch((err) => {
+          console.error("카카오 로그인 에러:", err);
+          alert("로그인에 실패했습니다.");
+          navigate("/login"); // 실패 시 로그인 페이지로 이동
+        });
+    } else {
+      alert("인가 코드를 찾을 수 없습니다.");
+      navigate("/login");
+    }
+  }, [navigate]);
 
   //일반 로그인
   const handleLogin = async (e) => {
@@ -85,11 +99,13 @@ const LoginPage = () => {
 
   // 카카오 로그인
   const kakaologinHandler = () => {
-    window.location.href = link;
-    navigate('/');
-  };
+    //카카오 로그인 키, 로그인화면면
+    const KAKAO_JS_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
+    const REDIRECT_URI = "http://15.164.249.16:8080/get-code";
+    const link = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_JS_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
 
-  
+    window.location.href = link;
+  };
 
   return (
     <BackgroundDiv>
