@@ -11,6 +11,7 @@ function FriendProfilePopup({ friend, onClose }) {
 
   return (
     <PopupContainer>
+      <CloseButton onClick={onClose}>×</CloseButton>
       <ProfileImage src={friend.profileImage || '/profile.png'} alt={friend.name} />
       <Name>{friend.name}</Name>
       <Email>{friend.email}</Email>
@@ -28,7 +29,6 @@ function FriendProfilePopup({ friend, onClose }) {
       </CallHistoryList>
 
       <ButtonGroup>
-        <CloseBtn onClick={onClose}>닫기</CloseBtn>
         <CallBtn onClick={handleCallClick}>전화 걸기</CallBtn>
       </ButtonGroup>
     </PopupContainer>
@@ -38,13 +38,13 @@ function FriendProfilePopup({ friend, onClose }) {
 export default FriendProfilePopup;
 
 const PopupContainer = styled.div`
-  width: 360px;
-  margin: 40px auto;
-  padding: 30px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+  width: 400px;
+  padding: 30px 20px;
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   text-align: center;
+  position: relative;
 `;
 
 const ProfileImage = styled.img`
@@ -55,9 +55,24 @@ const ProfileImage = styled.img`
   margin-bottom: 20px;
 `;
 
+const CloseButton = styled.button`
+  position: absolute;
+  right: 15px;
+  top: 15px;
+  font-size: 30px;
+  background: none;
+  border: none;
+  color: #CA9CC3;
+  cursor: pointer;
+`;
+
 const Name = styled.h2`
-  font-size: 22px;
   margin: 0;
+  font-size: 1.25rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
 `;
 
 const Email = styled.p`
@@ -67,12 +82,13 @@ const Email = styled.p`
 `;
 
 const Bio = styled.p`
-  margin-bottom: 30px;
-  color: rgb(190, 120, 196);
-  text-align: left;
-  background:rgb(244, 244, 244);
-  border-radius: 10px;
-  padding: 10px;
+  margin-top: 20px;
+  padding: 20px;
+  min-height: 50px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  color: #333;
+  font-size: 0.95rem;
 `
 
 const SectionTitle = styled.p`
@@ -101,23 +117,15 @@ const ButtonGroup = styled.div`
   gap: 10px;
 `;
 
-const CloseBtn = styled.button`
-  flex: 1;
-  padding: 12px;
-  background-color: #d9d9d9;
-  border: none;
-  border-radius: 10px;
-  font-weight: bold;
-  cursor: pointer;
-`;
-
 const CallBtn = styled.button`
   flex: 1;
   padding: 12px;
+
   background-color: #47b647;
   color: white;
   border: none;
   border-radius: 10px;
   font-weight: bold;
   cursor: pointer;
+  font-size: 1rem;
 `;
