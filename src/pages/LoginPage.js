@@ -3,51 +3,67 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../components/ToggleSwitch";
 
-const KAKAO_JS_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
-
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [userId, setuserId] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  //더미사용자
-  const dummyUsers = [
-    {
-      email: "test1@example.com",
-      name: "홍길동",
-      password: "1234",
-    },
-    {
-      email: "test2@example.com",
-      name: "이순신",
-      password: "abcd",
-    },
-  ];
+  //카카오 로그인 키, 로그인화면면
+  const REST_API_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
+  const REDIRECT_URI = 
+  const link = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
 
-  const handleLogin = () => {
-    // 이메일과 비밀번호가 일치하는 더미 유저 찾기
-    const user = dummyUsers.find(
-      (u) => u.email === userId && u.password === password
-    );
+  //일반 로그인
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-    if (user) {
-      // 서버와 통신하여 로그인 요청 (예시로 생략)
-      // 로그인 성공 시 사용자 정보 저장
-      localStorage.setItem("username", "사용자");
-      localStorage.setItem("userId", user.userId);
-      localStorage.setItem("userPassword", user.password);
-      localStorage.setItem("userprofile", "/profile.png");
-      alert(`${user.name}님 환영합니다!`);
+    try {
+      const response = await fetch("http://15.164.249.16:8080/general-login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "*/*",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      navigate("/");
-    } else {
-      alert("❌ 로그인 실패: 이메일 또는 비밀번호가 틀렸습니다.");
+      if (!response.ok) {
+        throw new Error("이메일 또는 비밀번호가 올바르지 않습니다.");
+      }
+
+      // 토큰 발급
+      const tokenResponse = await fetch(
+        `http://15.164.249.16:8080/login?email=${encodeURIComponent(email)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+          },
+        }
+      );
+
+      const tokenData = await tokenResponse.json();
+
+      if (tokenResponse.ok) {
+        localStorage.setItem("accessToken", tokenData.accessToken);
+        localStorage.setItem("refreshToken", tokenData.refreshToken);
+
+        console.log("✅ 로그인 및 토큰 발급 성공");
+        // 이후 페이지 이동 또는 상태 업데이트
+      } else {
+        console.error(
+          "❌ 토큰 발급 실패:",
+          tokenData.message || "알 수 없는 오류"
+        );
+      }
+    } catch (error) {
+      console.error("❌ 로그인 에러:", error.message);
     }
   };
 
   const handleClearId = () => {
-    setuserId("");
+    setEmail("");
   };
 
   const handleMouseEnter = () => {
@@ -82,9 +98,8 @@ const LoginPage = () => {
     }
 
     const kakaologinHandler = () => {
-    window.location.href = '';
-  };
-    
+      window.location.href = link;
+    };
   };
 
   return (
@@ -113,8 +128,8 @@ const LoginPage = () => {
             <Input
               type="email"
               placeholder="아이디를 입력하세요"
-              value={userId}
-              onChange={(e) => setuserId(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
             <Icon
               src="./id-clear-icon.png"
