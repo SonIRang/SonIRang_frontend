@@ -3,17 +3,19 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../components/ToggleSwitch";
 
+//카카오 로그인 키, 로그인화면면
+  const REST_API_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
+  const REDIRECT_URI = "";
+  const kakaolink = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
+
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  //카카오 로그인 키, 로그인화면면
-  const REST_API_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
-  const REDIRECT_URI = 
-  const link = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
-
+  
   //일반 로그인
   const handleLogin = async (e) => {
     e.preventDefault();
