@@ -5,6 +5,14 @@ import { useNavigate } from 'react-router-dom';
 const MyProfilePopup = ({ user, onClose }) => {
   const navigate = useNavigate();
 
+    const handleLogout = () => {
+      const confirmed = window.confirm("정말 로그아웃 하시겠어요?");
+      if (confirmed) {
+        localStorage.clear();
+        navigate("/login");
+      }
+    }
+    
   const handleSettingClick = () => {
     alert("구현중입니다");
   };
@@ -30,8 +38,10 @@ const MyProfilePopup = ({ user, onClose }) => {
       <BioBox>
         {user.bio && user.bio.trim() !== "" ? user.bio : "작성된 자기소개가 없습니다."}
       </BioBox>
-
-      <EditButton onClick={handleEditProfile}>프로필 수정하기</EditButton> 
+      <ButtonGroup>
+        <EditButton onClick={handleEditProfile}>프로필 수정하기</EditButton> 
+        <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton> 
+      </ButtonGroup>
     </PopupContainer>
   );
 };
@@ -96,10 +106,29 @@ const BioBox = styled.div`
   font-size: 0.95rem;
 `;
 
-const EditButton = styled.button`
+const ButtonGroup = styled.div`
   margin-top: 30px;
-  padding: 12px 0;
-  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+`;
+
+const LogoutButton = styled.button`
+  flex: 0.4;
+  padding: 12px;
+
+  background-color: #d9d9d9;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1rem;
+`;
+
+const EditButton = styled.button`
+  padding: 12px;
+  flex: 1;
 
   background-color: #CA9CC3;
   color: white;
