@@ -11,104 +11,125 @@ const dummyUsers = [
 const AddFriendPopup = ({ onClose }) => {
   const [emailInput, setEmailInput] = useState('');
   const [searchResult, setSearchResult] = useState(null);
-  const [searched, setSearched] = useState(false);  // 검색 여부 상태 추가
+  const [searched, setSearched] = useState(false);
 
   const handleSearch = () => {
-    const foundUser = dummyUsers.find(user => user.email === emailInput.trim());
+    const trimmed = emailInput.trim().toLowerCase();
+    const foundUser = dummyUsers.find(user => user.email.toLowerCase() === trimmed);
     setSearchResult(foundUser || null);
-    setSearched(true);  // 검색 버튼 누르면 true로 변경
+    setSearched(true);
   };
 
   const handleAdd = () => {
-    alert(`친구추가: 아직 구현중;;`);
+    alert('친구추가: 구현 중입니다');
   };
 
   return (
-    <PopupWrapper>
-      <CloseButton onClick={onClose}>X</CloseButton>
+    <PopupContainer>
+      <CloseButton onClick={onClose}>×</CloseButton>
       <Title>친구 추가</Title>
 
-      <Container>
+      <SearchContainer>
         <EmailInput
           type="text"
-          placeholder="이메일로 검색"
+          placeholder="이메일을 입력하세요"
           value={emailInput}
           onChange={(e) => {
             setEmailInput(e.target.value);
-            setSearched(false);  // 입력 변경 시 검색 초기화 (메시지 숨기기)
+            setSearched(false);
             setSearchResult(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch();
+            }
           }}
         />
         <SearchButton onClick={handleSearch}>검색</SearchButton>
-      </Container>
+      </SearchContainer>
 
-      {searchResult ? (
-        <ResultWrapper>
-          <UserInfo>
-            <ProfileImage
-              src={searchResult.profileImage || '/profile.png'}
-              alt={searchResult.name}
-            />
-            <UserName>{searchResult.name}</UserName>
-          </UserInfo>
-          <AddButton onClick={handleAdd}>추가</AddButton>
-        </ResultWrapper>
-      ) : (
-        searched && <NoResult>검색 결과가 없습니다.</NoResult>  // searched가 true일 때만 표시
+      {searched && (
+        searchResult ? (
+          <ResultWrapper>
+            <UserInfo>
+              <ProfileImage
+                src={searchResult.profileImage || '/profile.png'}
+                alt={searchResult.name}
+              />
+              <UserName>{searchResult.name}</UserName>
+            </UserInfo>
+            <AddButton onClick={handleAdd}>
+              <img alt='친구추가' src='/btnNewFriend.png' />
+            </AddButton>
+          </ResultWrapper>
+        ) : (
+          <NoResult>검색 결과가 없습니다.</NoResult>
+        )
       )}
-    </PopupWrapper>
+    </PopupContainer>
   );
 };
 
 export default AddFriendPopup;
 
-const PopupWrapper = styled.div`
-  border-radius: 8px;
-  padding: 20px;
-  background-color: #fff;
-  width: 40%;
-  border: 1px solid #ccc;
-  position: relative;
+const PopupContainer = styled.div`
+width: 400px;
+padding: 32px;
+background-color: #fff;
+border-radius: 16px;
+box-shadow: 0px 4px 20px rgba(0 , 0, 0, 0.1);
+position: relative;
 `;
 
 const CloseButton = styled.button`
   position: absolute;
-  top: 12px;
-  right: 12px;
+  right: 15px;
+  top: 15px;
+  font-size: 30px;
+  background: none;
   border: none;
-  background-color: white;
-  font-size: 16px;
+  color: #CA9CC3;
   cursor: pointer;
 `;
 
 const Title = styled.h3`
-  margin-top: 0;
-  margin-bottom: 20px;
+  margin: 0 0 20px 0;
 `;
 
-const Container = styled.div`
+const SearchContainer = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 30px;
 `;
 
 const EmailInput = styled.input`
-  width: 100%;
-  padding: 8px;
-  margin-right: 12px;
-  box-sizing: border-box;
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  background-color: #f9f9f9;
 `;
 
 const SearchButton = styled.button`
-  padding: 8px 16px;
+  padding: 10px 20px;
+  background-color: #d2a8d2;
+  border: none;
+  border-radius: 8px;
+  color: white;
   cursor: pointer;
+
+  &:hover {
+    background-color: #c194c1;
+  }
 `;
 
 const ResultWrapper = styled.div`
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 `;
 
 const UserInfo = styled.div`
@@ -117,9 +138,10 @@ const UserInfo = styled.div`
 `;
 
 const ProfileImage = styled.img`
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
+  object-fit: cover;
   margin-right: 12px;
 `;
 
@@ -128,10 +150,20 @@ const UserName = styled.span`
 `;
 
 const AddButton = styled.button`
+  background-color: #d2a8d2;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 16px;
+  color: white;
   cursor: pointer;
+
+  &:hover {
+    background-color: #c194c1;
+  }
 `;
 
 const NoResult = styled.p`
   color: #999;
-  margin-top: 0;
+  font-size: 0.9rem;
 `;
