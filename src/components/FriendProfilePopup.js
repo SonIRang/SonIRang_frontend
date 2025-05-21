@@ -8,6 +8,10 @@ function FriendProfilePopup({ friend, onClose }) {
   const handleCallClick = () => {
     navigate('/meeting');
   };
+  
+  const handleDeleteClick =() => {
+    alert("구현중입니다")
+  };
 
   return (
     <PopupContainer>
@@ -30,6 +34,7 @@ function FriendProfilePopup({ friend, onClose }) {
 
       <ButtonGroup>
         <CallBtn onClick={handleCallClick}>전화 걸기</CallBtn>
+        <DeleteBtn onClick={handleDeleteClick}>삭제</DeleteBtn>
       </ButtonGroup>
     </PopupContainer>
   );
@@ -115,6 +120,19 @@ const ButtonGroup = styled.div`
   display: flex;
   justify-content: space-between;
   gap: 10px;
+`;
+
+const DeleteBtn = styled.button`
+  flex: 0.4;
+  padding: 12px;
+
+  background-color: #d9d9d9;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1rem;
 `;
 
 const CallBtn = styled.button`
