@@ -16,12 +16,12 @@ function MainPage() {
   const userbio = localStorage.getItem("userbio");
   const userprofile = localStorage.getItem("userprofile");
 
-  // useEffect(() => {
-  //   // 사용자 정보 없으면 /login으로 리디렉트
-  //   if (!username || !useremail) {
-  //     navigate("/login");
-  //   }
-  // }, [navigate]);
+   useEffect(() => {
+     // 사용자 정보 없으면 /login으로 리디렉트
+     if (!username || !useremail) {
+       navigate("/login");
+     }
+   }, [navigate]);
 
   const myUser = new User({
     profileImage: userprofile,
@@ -71,7 +71,7 @@ function MainPage() {
   const [selectedFriend, setSelectedFriend] = useState(null);
 
   const filteredFriends = friends.filter((friend) =>
-    friend.name.toLowerCase().includes(search.toLowerCase())
+    (friend.name ?? "").toLowerCase().includes((search ?? "").toLowerCase())
   );
 
   const openAddFriendPopup = () => {

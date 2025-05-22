@@ -9,10 +9,12 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [message, setMessage] = useState("");
 
   //일반 로그인
   const handleLogin = async (e) => {
     e.preventDefault();
+    console.log("🟢 handleLogin 호출됨");
 
     try {
       const response = await fetch("/general-login", {
@@ -28,33 +30,28 @@ const LoginPage = () => {
         throw new Error("이메일 또는 비밀번호가 올바르지 않습니다.");
       }
 
-      // 토큰 발급
-      const tokenResponse = await fetch(
-        `/login?email=${encodeURIComponent(email)}`,
-        {
-          method: "POST",
-          headers: {
-            Accept: "*/*",
-          },
-        }
-      );
+      const data = await response.json();
 
-      const tokenData = await tokenResponse.json();
+      const accessToken = data.accessToken; // 예: { accessToken: "xxx", refreshToken: "yyy" }
+      const refreshToken = data.refreshToken;
 
-      if (tokenResponse.ok) {
-        localStorage.setItem("accessToken", tokenData.accessToken);
-        localStorage.setItem("refreshToken", tokenData.refreshToken);
-
-        console.log("✅ 로그인 및 토큰 발급 성공");
-        // 이후 페이지 이동 또는 상태 업데이트
-      } else {
-        console.error(
-          "❌ 토큰 발급 실패:",
-          tokenData.message || "알 수 없는 오류"
-        );
+      if (!accessToken || !refreshToken) {
+        throw new Error("로그인 응답에 토큰이 없습니다.");
       }
+
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("useremail", data.email);
+      localStorage.setItem("userbio", data.userbio || ""); // userbio가 없으면 빈 문자열
+      localStorage.setItem("userprofile", data.userprofile || ""); // userprofile이 없으면 빈 문자열
+
+      setMessage("로그인 성공!");
+      // 로그인 성공 후 메인 페이지 이동
+      navigate("/");
     } catch (error) {
-      console.error("❌ 로그인 에러:", error.message);
+      console.error("❌ 로그인 실패:", error.message);
+      alert(error.message);
     }
   };
 
