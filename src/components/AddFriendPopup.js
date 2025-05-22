@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import User from '../models/user';
+import axios from 'axios';
 
 const dummyUsers = [
   new User({ name: '심은지', email: 'eunji@gmail.com' }),
@@ -20,8 +21,32 @@ const AddFriendPopup = ({ onClose }) => {
     setSearched(true);
   };
 
-  const handleAdd = () => {
-    alert('친구추가: 구현 중입니다');
+  const handleAdd = async () => {
+    if (!searchResult) return;
+
+    try {
+      const response = await axios.post(
+        `/api/friends/add?requesterId=1`, 
+        {
+          targetEmail: searchResult.email,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        alert('친구가 성공적으로 추가되었습니다!');
+        onClose(); // 팝업 닫기
+      } else {
+        alert('친구 추가에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('친구 추가 오류:', error);
+      alert('친구 추가 중 오류가 발생했습니다.');
+    }
   };
 
   return (
