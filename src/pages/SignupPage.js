@@ -22,16 +22,14 @@ function SignupPage() {
   // 1. 이메일로 인증코드 전송
   const sendVerificationCode = async (email) => {
     try {
-      const response = await fetch(
-        "http://15.164.249.16:8080/request-email-verification",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        }
-      );
+      const response = await fetch("/request-email-verification", {
+        method: "POST",
+        headers: {
+          Accept: "*/*",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
 
       if (response.ok) {
         alert("인증번호가 전송되었습니다!");
@@ -47,50 +45,61 @@ function SignupPage() {
 
   // 2. 인증번호 검증
   const verifyCode = async () => {
+    console.log("verifyCode 호출");
+
+
     try {
-      const res = await axios.post("http://15.164.249.16:8080/verify-email", {
-        email,
-        code,
-      });
+    const res = await axios.get("/verify-email", {
+      params: { token: code }, // 인증번호
+      headers: {
+        Accept: "*/*",
+      },
+    });
 
-      if (res.data.verified) {
-        setIsVerified(true);
-        setMessage("이메일 인증 성공!");
-      } else {
-        setMessage("인증번호가 일치하지 않습니다.");
-      }
-    } catch (err) {
-      console.error(err);
-      setMessage("인증 오류");
+    console.log("서버 응답:", res.data);
+
+    if (res.data.verified) {
+      setIsVerified(true);             // 인증 상태 업데이트
+      setMessage("이메일 인증 성공!");
+      console.log("✅ 이메일 인증 완료");  // 🔥 이 부분이 핵심
+    } else {
+      setMessage("유효하지 않은 토큰입니다.");
     }
-  };
 
+  } catch (err) {
+    if (err.response?.status === 404) {
+      setMessage("존재하지 않거나 만료된 토큰입니다.");
+    } else {
+      setMessage("서버 오류로 인증에 실패했습니다.");
+    }
+  }
+  
+  };
 
   // 3. 회원가입
   const handleSignup = async () => {
-    if (!isVerified) {
-      setMessage("이메일 인증을 먼저 완료해주세요.");
-      return;
-    }
-
-    try {
-      await axios.post("http://15.164.249.16:8080/signup", {
-        username,
-        email,
-        password,
-      });
-      setMessage("회원가입 완료!");
-    } catch (err) {
-      console.error(err);
-      setMessage("회원가입 실패");
-    }
+    // if (!isVerified) {
+    //   setMessage("이메일 인증을 먼저 완료해주세요.");
+    //   return;
+    // }
 
     if (password !== confirmPassword) {
       setShowError(true); // 불일치 시 에러 표시
       return;
     }
 
-    navigate("/login");
+    try {
+      await axios.post("/signup", {
+        username,
+        email,
+        password,
+      });
+      setMessage("회원가입 완료!");
+      navigate("/login"); // 성공한 경우에만 이동
+    } catch (err) {
+      console.error(err);
+      setMessage("회원가입 실패");
+    }
   };
 
   return (
@@ -115,22 +124,22 @@ function SignupPage() {
               disabled={isCodeSent}
             />
             {!isCodeSent && (
-              <Button onClick={() => sendVerificationCode(email)}>인증번호 받기</Button>
+              <Button onClick={() => sendVerificationCode(email)}>
+                인증번호 받기
+              </Button>
             )}
           </Row>
 
           <Label>인증번호 확인</Label>
-          {isCodeSent && !isVerified && (
-            <Row style={{ marginBottom: "20px" }}>
-              <Input
-                type="text"
-                placeholder="인증번호를 입력하세요"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-              />
-              <Button onClick={verifyCode}>확인</Button>
-            </Row>
-          )}
+          <Row style={{ marginBottom: "20px" }}>
+            <Input
+              type="text"
+              placeholder="인증번호를 입력하세요"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+            <Button onClick={verifyCode}>확인</Button>
+          </Row>
 
           <Label>비밀번호</Label>
           <Input
