@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 function FriendProfilePopup({ friend, onClose }) {
   const navigate = useNavigate();
@@ -9,8 +10,30 @@ function FriendProfilePopup({ friend, onClose }) {
     navigate('/meeting');
   };
   
-  const handleDeleteClick =() => {
-    alert("구현중입니다")
+  const handleDeleteClick = async () => {
+    try {
+      const response = await axios.post(
+        `/api/friends/delete?requesterId=1`, 
+        {
+          targetEmail: friend.email,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        alert(friend.name+'님이 삭제되었습니다.');
+        onClose();
+      } else {
+        alert('친구 삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('친구 삭제 오류:', error);
+      alert('친구 삭제 중 오류가 발생했습니다.');
+    }
   };
 
   return (
