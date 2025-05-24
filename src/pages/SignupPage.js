@@ -90,7 +90,7 @@ function SignupPage() {
 
     try {
       await axios.post("/signup", {
-        username,
+        name:username,
         email,
         password,
       });
