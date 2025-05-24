@@ -16,12 +16,12 @@ function MainPage() {
   const userbio = localStorage.getItem("userbio");
   const userprofile = localStorage.getItem("userprofile");
 
-   useEffect(() => {
+  useEffect(() => {
      // 사용자 정보 없으면 /login으로 리디렉트
-     if (!username || !useremail) {
-       navigate("/login");
-     }
-   }, [navigate]);
+    if (!username || !useremail) {
+      navigate("/login");
+    }
+  }, [navigate, username, useremail]);
 
   const myUser = new User({
     profileImage: userprofile,
@@ -32,17 +32,45 @@ function MainPage() {
 
   const [friends, setFriends] = useState([]);
 
+  // 이메일로 userId 가져오기
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get("token");
-    if (token) {
-      localStorage.setItem("accessToken", token);
-      // URL에서 token 쿼리 제거하거나, 필요 시 리다이렉트해서 깔끔하게 만들기 가능
-    }
+    const fetchUserIdByEmail = async () => {
+      if (!useremail) return;
 
+      try {
+        const response = await axios.get(
+          `/api/friends/search?email=${encodeURIComponent(useremail)}`
+        );
+
+        if (response.status === 200 && response.data.data) {
+          const fetchedUserId = response.data.data.userId;
+          const fetchedUserProfile =  response.data.data.profileImageUrl;
+          localStorage.setItem("userid", fetchedUserId);
+          localStorage.setItem("userprofile", fetchedUserProfile);
+          console.log("userId 저장됨:", fetchedUserId);
+        } else {
+          console.warn("userId를 찾을 수 없습니다.");
+        }
+      } catch (error) {
+        console.error("userId를 불러오는 데 실패했습니다:", error);
+      }
+    };
+
+    fetchUserIdByEmail();
+  }, [useremail]);
+
+  // 친구 목록 불러오기
+  useEffect(() => {
     const fetchFriends = async () => {
+      const userId = localStorage.getItem("userid");
+      if (!userId) {
+        console.warn("userId 없음");
+        return;
+      }
+
       try {
         const response = await axios.get("/api/friends/list", {
-          params: { userId: 1 }, // 테스트용 임시 지정
+          params: { userId },
         });
 
         const friendData = response.data.data.map(
@@ -65,7 +93,7 @@ function MainPage() {
 
     fetchFriends();
   }, []);
-
+  
   const [search, setSearch] = useState("");
   const [popupType, setPopupType] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);

@@ -1,32 +1,46 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import User from '../models/user';
 import axios from 'axios';
-
-const dummyUsers = [
-  new User({ name: '심은지', email: 'eunji@gmail.com' }),
-  new User({ name: '이지윤', email: 'jy@gmail.com' }),
-  new User({ name: '최효민', email: 'choi@gmail.com' }),
-];
 
 const AddFriendPopup = ({ onClose }) => {
   const [emailInput, setEmailInput] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = () => {
-    const trimmed = emailInput.trim().toLowerCase();
-    const foundUser = dummyUsers.find(user => user.email.toLowerCase() === trimmed);
-    setSearchResult(foundUser || null);
+const handleSearch = async () => {
+  const trimmed = emailInput.trim().toLowerCase();
+  if (!trimmed) return;
+
+  try {
+    const response = await axios.get(
+      `/api/friends/search?email=${encodeURIComponent(trimmed)}`
+    );
+
+    if (response.status === 200 && response.data.data) {
+      const user = response.data.data;
+      setSearchResult({
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImageUrl
+      });
+    } else {
+      setSearchResult(null);
+    }
+  } catch (error) {
+    console.error('유저 검색 오류:', error);
+    setSearchResult(null);
+  } finally {
     setSearched(true);
-  };
+  }
+};
 
   const handleAdd = async () => {
+    const userId = localStorage.getItem("userid");
     if (!searchResult) return;
 
     try {
       const response = await axios.post(
-        `/api/friends/add?requesterId=1`, 
+        `/api/friends/add?requesterId=${userId}`, 
         {
           targetEmail: searchResult.email,
         },
