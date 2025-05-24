@@ -20,7 +20,7 @@ export default function ResponsiveChatLayout() {
             width: "100%",
             height: "80vh",
             backgroundColor: "#808080",
-            borderradius: "30px" ,
+            borderradius: "30px",
           }}
         >
           영통화면
@@ -30,21 +30,21 @@ export default function ResponsiveChatLayout() {
           <img
             src="/camera-on.png"
             alt="카메라"
-            className="w-12 h-12 cursor-pointer hover:opacity-80"
+            className="w-10 h-10 cursor-pointer hover:opacity-80"
             onClick={() => console.log("카메라 클릭")}
           />
           {/* 마이크 버튼 */}
           <img
             src="/mic-on.png"
             alt="마이크"
-            className="w-12 h-12 cursor-pointer hover:opacity-80"
+            className="w-10 h-10 cursor-pointer hover:opacity-80"
             onClick={() => console.log("마이크 클릭")}
           />
           {/* 통화 종료 버튼 */}
           <img
             src="/endcall.png"
             alt="통화 종료"
-            className="w-12 h-12 cursor-pointer hover:opacity-80"
+            className="w-10 h-10 cursor-pointer hover:opacity-80"
             onClick={() => navigate("/")}
           />
         </ButtonSide>
@@ -67,7 +67,7 @@ const Container = styled.div`
 
 const LeftPanel = styled.div`
   flex-grow: 1;
-  padding: 20px;
+  padding: 5px;
   transition: margin-right 0.3s ease;
   border-radius: 30px;
 
@@ -80,9 +80,11 @@ const LeftPanel = styled.div`
 `;
 
 const ButtonSide = styled.div`
-  hight: 100px;
+  hight: calc(15%-30px);
+  margin-botom: 30px;
   display: flex;
-  background-color: F2F2F7;
+  background-color: #f2f2f7;
+  border-radius: 30px;
   flex-direction: low;
   justify-content: center;
   align-items: center;
@@ -90,6 +92,6 @@ const ButtonSide = styled.div`
 
 const RightPanel = styled.div`
   hight: 80%;
-  padding: 10px;
+  padding: 5px;
   flex-direction: column;
 `;
