@@ -1,94 +1,127 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// import React, { useEffect, useRef, useState } from 'react';
+// import io, { Socket } from 'socket.io-client';
 
-const VideoCallScreen = () => {
-  const localVideoRef = useRef(null);
-  const [isCameraOn, setIsCameraOn] = useState(false);
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [stream, setStream] = useState(null);
-  const navigate = useNavigate();
+// const VideoCallScreen = () => {
+//   const localVideoRef = useRef<HTMLVideoElement>(null);
+//   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+//   const [isStartedVideo, setIsStartedVideo] = useState<boolean>(false);
+//   const [room, setRoom] = useState<string>('test_room');
+//   const [socket, setSocket] = useState<Socket | null>(null);
+//   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
 
-  useEffect(() => {
-    // 컴포넌트 언마운트 시 카메라 정리
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [stream]);
+//   useEffect(() => {
+//     const nextSocket = io('http://123.123.123.123:5000'); // 자신의 시그널링 서버 IP 주소
+//     setSocket(nextSocket);
 
-  const startCamera = async () => {
-    try {
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-      localVideoRef.current.srcObject = localStream;
-      setStream(localStream);
-      setIsCameraOn(true);
-      setIsMicOn(true);
-    } catch (err) {
-      console.error("카메라/마이크크 접근 실패:", err);
-    }
-  };
+//     // 구글에서 제공해주는 coturn 서버 활용
+//     const pc = new RTCPeerConnection({
+//       iceServers: [
+//         {
+//           urls: 'stun:stun.l.google.com:19302',
+//         },
+//         {
+//           urls: 'stun:stun1.l.google.com:19302',
+//         },
+//         {
+//           urls: 'stun:stun2.l.google.com:19302',
+//         },
+//         {
+//           urls: 'stun:stun3.l.google.com:19302',
+//         },
+//       ],
+//     });
 
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-      setIsCameraOn(false);
-      setIsMicOn(false);
-    }
-  };
+//     pc.onicecandidate = (event) => {
+//       if (!event.candidate) return;
+//       nextSocket.emit('candidate', { candidate: event.candidate, room });
+//     };
 
-  const toggleMic = () => {
-    if (stream) {
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = !track.enabled;
-        setIsMicOn(track.enabled);
-      });
-    }
-  };
+//     pc.ontrack = (event) => {
+//       if (!remoteVideoRef.current || !event.streams[0]) return;
+//       remoteVideoRef.current.srcObject = event.streams[0];
+//     };
 
-  return (
-    <MainContainer>
-      <div className="flex flex-col justify-center p-4">
-        <h2 className="text-xl font-bold mb-4">영상통화 화면</h2>
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full max-w-md rounded-2xl shadow-lg border border-gray-300 bg-gray-200"
-        />
+//     nextSocket.on('offer', async (msg) => {
+//       // 내가 보낸 offer인 경우, skip
+//       if (msg.sender === socket?.id) return;
 
-        <div className="flex flex-col items-center gap-4 mt-4">
-          <img
-            src={isMicOn ? "/speak-on.png" : "/speak-off.png"}
-            alt="마이크 상태"
-            className="w-full h-full object-contain"
-          />
+//       // connection에 상대 peer의 SDP 정보를 설정
+//       await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
 
-          <div className="mt-4 space-x-2">
-            {!isCameraOn ? ( //카메라 켜기
-              <img src="/camera-on.png" onClick={startCamera} />
-            ) : (
-              //카메라 끄기
-              <img src="/camera-off.png" onClick={stopCamera} />
-            )}
-          </div>
+//       // 설정 이후 상대 peer에게 나의 SDP 응답
+//       const answer = await pc.createAnswer();
+//       await pc.setLocalDescription(answer);
+//       nextSocket.emit('answer', { sdp: pc.localDescription, room });
+//     });
 
-          {/* 통화 종료 버튼 */}
-          <img
-            src="/endcall.png"
-            alt="통화 종료"
-            onClick={() => navigate("/")}
-            className="mt-6 w-12 h-12 cursor-pointer hover:opacity-80"
-          />
-        </div>
-      </div>
-    </MainContainer>
-  );
-};
+//     nextSocket.on('answer', (msg) => {
+//       if (msg.sender === socket?.id) return;
+//       // connection에 상대 peer에게 받은 SDP 정보를 설정
+//       pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+//     });
 
-export default VideoCallScreen;
+//     nextSocket.on('candidate', (msg) => {
+//       if (msg.sender === socket?.id) return;
+//       // 데이터를 보낼 수 있는 네트워크 경로를 찾기 위해 ICE 프로세스를 수행하는 단계
+//       pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+//     });
+
+//     setPeerConnection(pc);
+//   }, []);
+
+//   const startVideo = async () => {
+//     if (!localVideoRef.current) return;
+//     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+//     localVideoRef.current.srcObject = stream;
+//     stream.getTracks().forEach((track) => peerConnection?.addTrack(track, stream));
+//     setIsStartedVideo(true);
+//   };
+
+//   const joinRoom = () => {
+//     if (!socket || !room) return;
+//     socket.emit('join', { room });
+//   };
+
+//   const call = async () => {
+//     const offer = await peerConnection?.createOffer();
+//     await peerConnection?.setLocalDescription(offer);
+//     socket?.emit('offer', { sdp: offer, room });
+//   };
+
+//   return (
+//     <div className="flex flex-col gap-6">
+//       <div className="flex justify-center gap-2">
+//         <div className="flex flex-col items-center">
+//           <div className="font-semibold">내 화면</div>
+//           <video ref={localVideoRef} autoPlay playsInline muted></video>
+//         </div>
+//         <div className="flex flex-col items-center">
+//           <div className="font-semibold">상대 화면</div>
+//           <video ref={remoteVideoRef} autoPlay playsInline></video>
+//         </div>
+//       </div>
+//       <div className="text-center font-semibold">Room Name: {room}</div>
+//       <div className="justify-center flex items-center gap-6">
+//         {!isStartedVideo && (
+//           <button
+//             className="shadow-md px-3 py-2 rounded hover:bg-slate-50 active:shadow-none"
+//             onClick={() => {
+//               startVideo();
+//               joinRoom();
+//             }}
+//           >
+//             비디오 연결
+//           </button>
+//         )}
+//         <button
+//           className="shadow-md px-3 py-2 rounded hover:bg-slate-50 active:shadow-none"
+//           onClick={call}
+//         >
+//           통화 시작
+//         </button>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default VideoCallScreen;

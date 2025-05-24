@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import ChatWindow from "../components/Chat";
-import VideoCallScreen from "../components/VideoCallScreen";
+// import VideoCallScreen from "../components/VideoCallScreen";
 
 export default function ResponsiveChatLayout() {
   const navigate = useNavigate();
@@ -20,10 +20,12 @@ export default function ResponsiveChatLayout() {
             width: "100%",
             height: "80vh",
             backgroundColor: "#808080",
+            borderradius: "30px" ,
           }}
         >
           영통화면
         </p>
+        {/* <VideoCallScreen/> */}
         <ButtonSide>
           <img
             src="/camera-on.png"
@@ -67,9 +69,10 @@ const LeftPanel = styled.div`
   flex-grow: 1;
   padding: 20px;
   transition: margin-right 0.3s ease;
+  border-radius: 30px;
 
   margin-right: ${(props) =>
-    props.isChatOpen ? "500px" : "0"}; /* 채팅창 너비만큼 밀림 */
+    props.isChatOpen ? "30%" : "0"}; /* 채팅창 너비만큼 밀림 */
 
   @media (max-width: 768px) {
     margin-right: 0; /* 모바일에선 전체 화면 */
@@ -86,6 +89,7 @@ const ButtonSide = styled.div`
 `;
 
 const RightPanel = styled.div`
-  hight: 90%;
+  hight: 80%;
+  padding: 10px;
   flex-direction: column;
 `;
