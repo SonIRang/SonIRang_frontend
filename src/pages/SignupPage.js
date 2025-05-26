@@ -6,7 +6,8 @@ import axios from "axios";
 function SignupPage() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState([]);
+  const [userid, setUserid] = useState("");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -47,58 +48,63 @@ function SignupPage() {
   const verifyCode = async () => {
     console.log("verifyCode 호출");
 
-
     try {
-    const res = await axios.get("/verify-email", {
-      params: { token: code }, // 인증번호
-      headers: {
-        Accept: "*/*",
-      },
-    });
+      const res = await axios.get("/verify-email", {
+        params: { token: code }, // 인증번호
+        headers: {
+          Accept: "*/*",
+        },
+      });
 
-    console.log("서버 응답:", res.data);
+      console.log("서버 응답:", res.data);
 
-    if (res.data.verified) {
-      setIsVerified(true);             // 인증 상태 업데이트
-      setMessage("이메일 인증 성공!");
-      console.log("✅ 이메일 인증 완료");  // 🔥 이 부분이 핵심
-    } else {
-      setMessage("유효하지 않은 토큰입니다.");
+      if (res.data.verified) {
+        setIsVerified(true); // 인증 상태 업데이트
+        setMessage("이메일 인증 성공!");
+        //console.log("✅ 이메일 인증 완료"); // 🔥 이 부분이 핵심
+      } else {
+        setMessage("유효하지 않은 토큰입니다.");
+      }
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setMessage("존재하지 않거나 만료된 토큰입니다.");
+      } else {
+        setMessage("서버 오류로 인증에 실패했습니다.");
+      }
     }
-
-  } catch (err) {
-    if (err.response?.status === 404) {
-      setMessage("존재하지 않거나 만료된 토큰입니다.");
-    } else {
-      setMessage("서버 오류로 인증에 실패했습니다.");
-    }
-  }
-  
   };
 
   // 3. 회원가입
   const handleSignup = async () => {
-    // if (!isVerified) {
-    //   setMessage("이메일 인증을 먼저 완료해주세요.");
-    //   return;
-    // }
+    if (!isVerified) {
+      setMessage("이메일 인증을 먼저 완료해주세요.");
+      return;
+    }
 
     if (password !== confirmPassword) {
-      setShowError(true); // 불일치 시 에러 표시
+      setShowError("비밀번호가 일치하지 않습니다."); // 불일치 시 에러 표시
       return;
     }
 
     try {
-      await axios.post("/signup", {
-        name:username,
+      const response = await axios.post("/signup", {
+        name: username,
         email,
         password,
       });
-      setMessage("회원가입 완료!");
-      navigate("/login"); // 성공한 경우에만 이동
+
+      // 서버가 발급한 userid 받기
+      const newUserId = response.data.userid;
+
+      console.log("발급된 userid:", newUserId);
+
+      alert("회원가입 완료!");
+      // 필요하면 상태에 저장하거나, 로컬스토리지에 저장하거나 처리 가능
+
+      navigate("/login"); // 로그인 페이지로 이동
     } catch (err) {
       console.error(err);
-      setMessage("회원가입 실패");
+      alert("회원가입 실패");
     }
   };
 
@@ -107,12 +113,14 @@ function SignupPage() {
       <SignupContainer>
         <FormContainer>
           <Label>이름</Label>
-          <Input
-            type="text"
-            placeholder="이름을 입력하세요"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+          <Row>
+            <RowInput
+              type="text"
+              placeholder="이름을 입력하세요"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </Row>
 
           <Label>이메일</Label>
           <Row>
@@ -140,26 +148,31 @@ function SignupPage() {
             />
             <Button onClick={verifyCode}>확인</Button>
           </Row>
+          {message && <VerifyError>{message}</VerifyError>}
 
           <Label>비밀번호</Label>
-          <Input
-            type="password"
-            placeholder="비밀번호를 입력하세요"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setShowError(false);
-            }}
-          />
-          <Input
-            type="password"
-            placeholder="비밀번호 확인"
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              setShowError(false);
-            }}
-          />
+          <Row>
+            <RowInput
+              type="password"
+              placeholder="비밀번호를 입력하세요"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setShowError(false);
+              }}
+            />
+          </Row>
+          <Row>
+            <RowInput
+              type="password"
+              placeholder="비밀번호 확인"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setShowError(false);
+              }}
+            />
+          </Row>
           {showError && password !== confirmPassword && (
             <ErrorMessage>비밀번호가 일치하지 않습니다.</ErrorMessage>
           )}
@@ -187,8 +200,8 @@ const BackgroundDiv = styled.div`
 `;
 
 const SignupContainer = styled.div`
-  width: 28vw;
-  height: 75vh;
+  width: 25%;
+  height: 80%;
   background-color: #ffffff;
   border-radius: 20px;
   box-shadow: 0 4px 32.6px rgba(149, 138, 181, 1);
@@ -212,6 +225,7 @@ const Label = styled.label`
 `;
 
 const Input = styled.input`
+  width: calc(60%);
   height: 48px;
   padding: 0 10px;
   margin-bottom: 5px;
@@ -222,11 +236,15 @@ const Input = styled.input`
 `;
 
 const Row = styled.div`
-  height: 48px;
+  width: 100%;
   display: flex;
   gap: 10px;
   align-items: center;
   margin-bottom: 5px;
+`;
+
+const RowInput = styled(Input)`
+  flex: 1;
 `;
 
 const Button = styled.button`
@@ -251,6 +269,12 @@ const SubmitButton = styled.button`
 `;
 
 const ErrorMessage = styled.p`
+  color: red;
+  font-size: 13px;
+  margin-top: 5px;
+`;
+
+const VerifyError = styled.p`
   color: red;
   font-size: 13px;
   margin-top: 5px;
