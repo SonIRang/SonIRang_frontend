@@ -1,32 +1,30 @@
-// src/pages/MeetingPage.js
-import React from "react";
+import React, { useState } from "react";
+import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-// import VideoCallScreen from "../components/VideoCallScreen";
 import ChatWindow from "../components/Chat";
+import VideoCallScreen from "../components/VideoCallScreen";
 
-
-const MeetingPage = () => {
+export default function ResponsiveChatLayout() {
   const navigate = useNavigate();
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const toggleChat = () => {
+    setChatOpen((prev) => !prev);
+  };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-
-      {/* 왼쪽: 영상통화 화면 + 버튼 */}
-      <div className="flex flex-col flex-1 items-center justify-between py-6">
-        {/* 영상 통화 화면 */}
-        <div className="flex-1 flex items-center justify-center">
-          <h1 className="text-2xl font-bold">영상통화 화면</h1>
-          {/* <VideoCallScreen/> */}
-        </div>
-
-        <div className="flex-1 flex items-center justify-center">
-          <h2 className="text-2xl font-bold"
-          onClick={() => navigate("/signup")}>회원가입</h2>
-        </div>
-
-        {/* 버튼 그룹 */}
-        <div className="flex justify-center space-x-6 py-6">
-          {/* 카메라 버튼 */}
+    <Container>
+      <LeftPanel isChatOpen={chatOpen}>
+        <p
+          style={{
+            width: "100%",
+            height: "80vh",
+            backgroundColor: "#808080",
+          }}
+        >
+          영통화면
+        </p>
+        <ButtonSide>
           <img
             src="/camera-on.png"
             alt="카메라"
@@ -47,14 +45,47 @@ const MeetingPage = () => {
             className="w-12 h-12 cursor-pointer hover:opacity-80"
             onClick={() => navigate("/")}
           />
-        </div>
-      </div>
+        </ButtonSide>
+      </LeftPanel>
 
-      <div>
-        <ChatWindow />
-      </div>
-    </div>
+      <RightPanel>
+        <ChatWindow isOpen={chatOpen} toggleChat={toggleChat} />
+      </RightPanel>
+    </Container>
   );
-};
+}
 
-export default MeetingPage;
+// 스타일 컴포넌트
+
+const Container = styled.div`
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+`;
+
+const LeftPanel = styled.div`
+  flex-grow: 1;
+  padding: 20px;
+  transition: margin-right 0.3s ease;
+
+  margin-right: ${(props) =>
+    props.isChatOpen ? "500px" : "0"}; /* 채팅창 너비만큼 밀림 */
+
+  @media (max-width: 768px) {
+    margin-right: 0; /* 모바일에선 전체 화면 */
+  }
+`;
+
+const ButtonSide = styled.div`
+  hight: 100px;
+  display: flex;
+  background-color: F2F2F7;
+  flex-direction: low;
+  justify-content: center;
+  align-items: center;
+`;
+
+const RightPanel = styled.div`
+  hight: 90%;
+  flex-direction: column;
+`;

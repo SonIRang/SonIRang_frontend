@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import User from '../models/user';
+import axios from 'axios';
 
 const dummyUsers = [
   new User({ name: '심은지', email: 'eunji@gmail.com' }),
@@ -11,67 +12,183 @@ const dummyUsers = [
 const AddFriendPopup = ({ onClose }) => {
   const [emailInput, setEmailInput] = useState('');
   const [searchResult, setSearchResult] = useState(null);
+  const [searched, setSearched] = useState(false);
 
   const handleSearch = () => {
-    const foundUser = dummyUsers.find(user => user.email === emailInput.trim());
+    const trimmed = emailInput.trim().toLowerCase();
+    const foundUser = dummyUsers.find(user => user.email.toLowerCase() === trimmed);
     setSearchResult(foundUser || null);
+    setSearched(true);
   };
 
-  const handleAdd = () => {
-    alert(`친구추가: 아직 구현중;;`);
+  const handleAdd = async () => {
+    if (!searchResult) return;
+
+    try {
+      const response = await axios.post(
+        `/api/friends/add?requesterId=1`, 
+        {
+          targetEmail: searchResult.email,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        alert('친구가 성공적으로 추가되었습니다!');
+        onClose(); // 팝업 닫기
+      } else {
+        alert('친구 추가에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('친구 추가 오류:', error);
+      alert('친구 추가 중 오류가 발생했습니다.');
+    }
   };
 
   return (
-    <div style={{
-      borderRadius: '8px',
-      padding: '20px',
-      backgroundColor: '#fff',
-      width: '40%',
-      border: '1px solid #ccc'
-    }}>
-      <button 
-      style={{
-      float: 'right',
-      border: 'none',
-      backgroundColor:'white'
-      }}
-      onClick={onClose}>X</button>
-      <h3>친구 추가</h3>
+    <PopupContainer>
+      <CloseButton onClick={onClose}>×</CloseButton>
+      <Title>친구 추가</Title>
 
-    <Container>
-    <input
-        type="text"
-        placeholder="이메일로 검색"
-        value={emailInput}
-        onChange={(e) => setEmailInput(e.target.value)}
-        style={{ width: '100%', padding: '8px', marginBottom: '12px' }}
-      />
-      <button onClick={handleSearch} style={{ marginBottom: '16px' }}>검색</button>
-      </Container>
+      <SearchContainer>
+        <EmailInput
+          type="text"
+          placeholder="이메일을 입력하세요"
+          value={emailInput}
+          onChange={(e) => {
+            setEmailInput(e.target.value);
+            setSearched(false);
+            setSearchResult(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch();
+            }
+          }}
+        />
+        <SearchButton onClick={handleSearch}>검색</SearchButton>
+      </SearchContainer>
 
-      {searchResult ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <img
-              src={searchResult.profileImage || '/profile.png'}
-              alt={searchResult.name}
-              style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '12px' }}
-            />
-            <span>{searchResult.name}</span>
-          </div>
-          <button onClick={handleAdd}>추가</button>
-        </div>
-      ) : (
-        emailInput && <p style={{ color: '#999' }}>검색 결과가 없습니다.</p>
+      {searched && (
+        searchResult ? (
+          <ResultWrapper>
+            <UserInfo>
+              <ProfileImage
+                src={searchResult.profileImage || '/profile.png'}
+                alt={searchResult.name}
+              />
+              <UserName>{searchResult.name}</UserName>
+            </UserInfo>
+            <AddButton onClick={handleAdd}>
+              <img alt='친구추가' src='/btnNewFriend.png' />
+            </AddButton>
+          </ResultWrapper>
+        ) : (
+          <NoResult>검색 결과가 없습니다.</NoResult>
+        )
       )}
-    </div>
+    </PopupContainer>
   );
 };
 
 export default AddFriendPopup;
 
-const Container = styled.div`
+const PopupContainer = styled.div`
+width: 400px;
+padding: 32px;
+background-color: #fff;
+border-radius: 16px;
+box-shadow: 0px 4px 20px rgba(0 , 0, 0, 0.1);
+position: relative;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  right: 15px;
+  top: 15px;
+  font-size: 30px;
+  background: none;
+  border: none;
+  color: #CA9CC3;
+  cursor: pointer;
+`;
+
+const Title = styled.h3`
+  margin: 0 0 20px 0;
+`;
+
+const SearchContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 30px;
+`;
+
+const EmailInput = styled.input`
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  background-color: #f9f9f9;
+`;
+
+const SearchButton = styled.button`
+  padding: 10px 20px;
+  background-color: #d2a8d2;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #c194c1;
+  }
+`;
+
+const ResultWrapper = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 12px;
+`;
+
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const ProfileImage = styled.img`
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 12px;
+`;
+
+const UserName = styled.span`
+  font-weight: 500;
+`;
+
+const AddButton = styled.button`
+  background-color: #d2a8d2;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 16px;
+  color: white;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #c194c1;
+  }
+`;
+
+const NoResult = styled.p`
+  color: #999;
+  font-size: 0.9rem;
 `;
