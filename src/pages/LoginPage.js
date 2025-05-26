@@ -36,7 +36,7 @@ const LoginPage = () => {
           width: "100vw",
           height: "100vh",
           backgroundColor: "#ffffff",
-          gap: "10px",
+          gap: "16px",
           padding: "10px",
           boxSizing: "border-box",
           display: "flex",
