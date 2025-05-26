@@ -81,8 +81,9 @@ function SignupPage() {
       return;
     }
 
+    // 불일치 시 에러 표시
     if (password !== confirmPassword) {
-      setShowError("비밀번호가 일치하지 않습니다."); // 불일치 시 에러 표시
+      setShowError("비밀번호가 일치하지 않습니다."); 
       return;
     }
 
@@ -99,8 +100,6 @@ function SignupPage() {
       console.log("발급된 userid:", newUserId);
 
       alert("회원가입 완료!");
-      // 필요하면 상태에 저장하거나, 로컬스토리지에 저장하거나 처리 가능
-
       navigate("/login"); // 로그인 페이지로 이동
     } catch (err) {
       console.error(err);
@@ -200,12 +199,12 @@ const BackgroundDiv = styled.div`
 `;
 
 const SignupContainer = styled.div`
-  width: 25%;
+  width: 30%;
   height: 80%;
   background-color: #ffffff;
   border-radius: 20px;
   box-shadow: 0 4px 32.6px rgba(149, 138, 181, 1);
-  padding: 10px;
+  padding: 40px 10px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -213,8 +212,10 @@ const SignupContainer = styled.div`
 `;
 
 const FormContainer = styled.div`
-  width: 20vw;
-  height: 55vh;
+  width: 80%;
+  height: 70%;
+  margin-top: 20px;
+  margin-top: 20px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -225,7 +226,7 @@ const Label = styled.label`
 `;
 
 const Input = styled.input`
-  width: calc(60%);
+  width: calc(68%);
   height: 48px;
   padding: 0 10px;
   margin-bottom: 5px;
