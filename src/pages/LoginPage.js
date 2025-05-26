@@ -161,7 +161,7 @@ const LoginPage = () => {
 export default LoginPage;
 
 const BackgroundDiv = styled.div`
-  height: calc(100vh - 80px);
+  height: 100vh;
   margin: 0;
   display: flex;
   justify-content: center;
@@ -180,8 +180,8 @@ const LeftPanel = styled.div`
 `;
 
 const RightPanel = styled.div`
-  width: 100vw;
-  height: calc(100vh - 80px);
+  width: 100%;
+  height: 100vh;
   background-color: #ffffff;
   gap: 10px;
   padding: 10px;
