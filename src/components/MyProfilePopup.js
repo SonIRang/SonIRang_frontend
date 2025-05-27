@@ -34,6 +34,7 @@ const MyProfilePopup = ({ user, onClose }) => {
         {user.name}
         <SettingIcon onClick={handleSettingClick}>⚙️</SettingIcon>
       </UserName>
+      <UserEmail>{user.email}</UserEmail>
 
       <BioBox>
         {user.bio && user.bio.trim() !== "" ? user.bio : "작성된 자기소개가 없습니다."}
@@ -85,6 +86,7 @@ const UserName = styled.h2`
   justify-content: center;
   align-items: center;
   gap: 5px;
+  margin-bottom: 0px;
 `;
 
 const SettingIcon = styled.span`
@@ -95,6 +97,12 @@ const SettingIcon = styled.span`
     opacity: 0.7;
   }
 `;
+
+const UserEmail = styled.p`
+  color: #555;
+  margin-bottom: 30px;
+  margin-top: 0px;
+`
 
 const BioBox = styled.div`
   margin-top: 20px;

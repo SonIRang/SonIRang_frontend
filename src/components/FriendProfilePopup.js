@@ -1,48 +1,56 @@
-import React from 'react';
-import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React, { useEffect } from "react";
+import styled from "styled-components";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 function FriendProfilePopup({ friend, onClose }) {
   const navigate = useNavigate();
 
   const handleCallClick = () => {
-    navigate('/meeting');
+    const receiverId = localStorage.getItem("receiverId");
+    if (!receiverId) {
+      alert("상대방 ID가 localStorage에 없습니다.");
+      return;
+    }
+    navigate("/meeting", { state: { receiverId } });
   };
-  
+
   const handleDeleteClick = async () => {
     try {
       const response = await axios.post(
-        `/api/friends/delete?requesterId=1`, 
+        `/api/friends/delete?requesterId=1`,
         {
           targetEmail: friend.email,
         },
         {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         }
       );
 
       if (response.status === 200) {
-        alert(friend.name+'님이 삭제되었습니다.');
+        alert(friend.name + "님이 삭제되었습니다.");
         onClose();
       } else {
-        alert('친구 삭제에 실패했습니다.');
+        alert("친구 삭제에 실패했습니다.");
       }
     } catch (error) {
-      console.error('친구 삭제 오류:', error);
-      alert('친구 삭제 중 오류가 발생했습니다.');
+      console.error("친구 삭제 오류:", error);
+      alert("친구 삭제 중 오류가 발생했습니다.");
     }
   };
 
   return (
     <PopupContainer>
       <CloseButton onClick={onClose}>×</CloseButton>
-      <ProfileImage src={friend.profileImage || '/profile.png'} alt={friend.name} />
+      <ProfileImage
+        src={friend.profileImage || "/profile.png"}
+        alt={friend.name}
+      />
       <Name>{friend.name}</Name>
       <Email>{friend.email}</Email>
-      <Bio>{friend.bio  || "작성된 자기소개가 없습니다."}</Bio>
+      <Bio>{friend.bio || "작성된 자기소개가 없습니다."}</Bio>
 
       <SectionTitle>통화 기록</SectionTitle>
       <CallHistoryList>
@@ -90,7 +98,7 @@ const CloseButton = styled.button`
   font-size: 30px;
   background: none;
   border: none;
-  color: #CA9CC3;
+  color: #ca9cc3;
   cursor: pointer;
 `;
 
@@ -117,7 +125,7 @@ const Bio = styled.p`
   border-radius: 12px;
   color: #333;
   font-size: 0.95rem;
-`
+`;
 
 const SectionTitle = styled.p`
   font-weight: bold;

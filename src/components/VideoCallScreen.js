@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
-const VideoCallScreen = ({ receiverId, receiver }) => {
+const VideoCallScreen = ({ currentUser, receiver }) => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
 
@@ -19,7 +18,7 @@ const VideoCallScreen = ({ receiverId, receiver }) => {
   };
 
   useEffect(() => {
-    if (!receiverId) return;
+    if (!currentUser) return;
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
       alert("JWT 토큰이 없습니다. 로그인 후 다시 시도해주세요.");
@@ -27,9 +26,7 @@ const VideoCallScreen = ({ receiverId, receiver }) => {
     }
 
     const socket = new SockJS(
-      `http://localhost:8080/ws-signaling?token=${encodeURIComponent(
-        accessToken
-      )}`
+      `http://localhost:8080/ws-signaling?token=${encodeURIComponent(accessToken)}`
     );
 
     const stompClient = new Client({
@@ -69,7 +66,7 @@ const VideoCallScreen = ({ receiverId, receiver }) => {
     return () => {
       stompClient.deactivate();
     };
-  }, [receiverId]);
+  }, [currentUser]);
 
   const startMedia = async () => {
     try {
@@ -159,9 +156,7 @@ const VideoCallScreen = ({ receiverId, receiver }) => {
     if (!peerConnection) createPeerConnection();
     if (!peerConnection) return;
 
-    await peerConnection.setRemoteDescription(
-      new RTCSessionDescription(data.data)
-    );
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
     remoteDescriptionSetRef.current = true;
 
     for (const c of iceCandidateQueueRef.current) {
@@ -191,9 +186,7 @@ const VideoCallScreen = ({ receiverId, receiver }) => {
 
   const handleAnswer = async (data) => {
     if (!peerConnection) return;
-    await peerConnection.setRemoteDescription(
-      new RTCSessionDescription(data.data)
-    );
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
     remoteDescriptionSetRef.current = true;
 
     for (const c of iceCandidateQueueRef.current) {
@@ -224,15 +217,15 @@ const VideoCallScreen = ({ receiverId, receiver }) => {
   };
 
   return (
-    <VideoContainer>
+    <Container>
       <LocalVideo ref={localVideoRef} autoPlay muted />
       <RemoteVideo ref={remoteVideoRef} autoPlay />
       <Spacer />
-      <InfoText>내 ID (자동 설정됨): {receiverId}</InfoText>
+      <InfoText>내 ID (자동 설정됨): {currentUser}</InfoText>
       <InfoText>상대방 ID: {receiver}</InfoText>
       <Button onClick={startMedia}>카메라 시작</Button>
       <Button onClick={createOffer}>통화 시작</Button>
-    </VideoContainer>
+    </Container>
   );
 };
 
@@ -240,30 +233,18 @@ export default VideoCallScreen;
 
 // styled-components는 컴포넌트 함수 아래에 위치
 
-const MainContainer = styled.div`
-  width: 100%;
-  height: 100vh;
-  background-color: black;
-  position: relative;
-`;
-
-const VideoContainer = styled.div`
-  position: relative;
+const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
 `;
 
 const LocalVideo = styled.video`
-  width: 60%;
-  border: 1px solid red; // 구분하기 쉬우라고 빨간색으로 예시
-  z-index: 2; // 더 위에 오게
+  width: 70%;
+  border: 1px solid gray;
 `;
 
 const RemoteVideo = styled.video`
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
   width: 20%;
   border: 1px solid gray;
   margin-top: 1rem;
