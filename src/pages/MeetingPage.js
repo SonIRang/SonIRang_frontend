@@ -15,15 +15,7 @@ export default function ResponsiveChatLayout() {
   return (
     <Container>
       <LeftPanel isChatOpen={chatOpen}>
-        <p
-          style={{
-            width: "100%",
-            height: "80vh",
-            backgroundColor: "#808080",
-          }}
-        >
-          영통화면
-        </p>
+        <VideoCallScreen/>
         <ButtonSide>
           <img
             src="/camera-on.png"

@@ -1,94 +1,274 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
-const VideoCallScreen = () => {
+const VideoCallScreen = ({ currentUser, receiver }) => {
   const localVideoRef = useRef(null);
-  const [isCameraOn, setIsCameraOn] = useState(false);
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [stream, setStream] = useState(null);
-  const navigate = useNavigate();
+  const remoteVideoRef = useRef(null);
+
+  const [client, setClient] = useState(null);
+  const [peerConnection, setPeerConnection] = useState(null);
+  const localStreamRef = useRef(null);
+  const iceCandidateQueueRef = useRef([]);
+  const remoteDescriptionSetRef = useRef(false);
+
+  const rtcConfig = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  };
 
   useEffect(() => {
-    // 컴포넌트 언마운트 시 카메라 정리
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [stream]);
+    if (!currentUser) return;
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      alert("JWT 토큰이 없습니다. 로그인 후 다시 시도해주세요.");
+      return;
+    }
 
-  const startCamera = async () => {
+    const socket = new SockJS(
+      `http://localhost:8080/ws-signaling?token=${encodeURIComponent(accessToken)}`
+    );
+
+    const stompClient = new Client({
+      webSocketFactory: () => socket,
+      debug: (str) => console.log(str),
+      reconnectDelay: 5000,
+      heartbeatIncoming: 0,
+      heartbeatOutgoing: 0,
+      onConnect: (frame) => {
+        console.log("✅ WebSocket 연결됨:", frame);
+        stompClient.subscribe("/user/queue/signal", (message) => {
+          const data = JSON.parse(message.body);
+          switch (data.type) {
+            case "offer":
+              handleOffer(data);
+              break;
+            case "answer":
+              handleAnswer(data);
+              break;
+            case "candidate":
+              handleCandidate(data);
+              break;
+            default:
+              console.warn("알 수 없는 메시지 타입:", data.type);
+          }
+        });
+      },
+      onStompError: (frame) => {
+        alert("WebSocket 연결 실패: " + frame.headers["message"]);
+        console.error("❌ WebSocket 연결 실패:", frame);
+      },
+    });
+
+    stompClient.activate();
+    setClient(stompClient);
+
+    return () => {
+      stompClient.deactivate();
+    };
+  }, [currentUser]);
+
+  const startMedia = async () => {
     try {
-      const localStream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
-      localVideoRef.current.srcObject = localStream;
-      setStream(localStream);
-      setIsCameraOn(true);
-      setIsMicOn(true);
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      console.log("🎥 로컬 미디어 시작됨");
     } catch (err) {
-      console.error("카메라/마이크크 접근 실패:", err);
+      console.error("❌ 미디어 시작 실패:", err);
+      alert("카메라/마이크 권한을 확인해주세요.");
     }
   };
 
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-      setIsCameraOn(false);
-      setIsMicOn(false);
+  const createPeerConnection = () => {
+    if (!localStreamRef.current) {
+      alert("먼저 미디어를 시작해주세요.");
+      return;
     }
+    const pc = new RTCPeerConnection(rtcConfig);
+
+    localStreamRef.current.getTracks().forEach((track) => {
+      pc.addTrack(track, localStreamRef.current);
+    });
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && client && receiver) {
+        client.publish({
+          destination: "/app/signal",
+          body: JSON.stringify({
+            type: "candidate",
+            to: receiver,
+            data: event.candidate,
+          }),
+        });
+      }
+    };
+
+    pc.ontrack = (event) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    iceCandidateQueueRef.current = [];
+    remoteDescriptionSetRef.current = false;
+    setPeerConnection(pc);
   };
 
-  const toggleMic = () => {
-    if (stream) {
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = !track.enabled;
-        setIsMicOn(track.enabled);
+  const createOffer = async () => {
+    if (!client || !receiver) {
+      alert("WebSocket 연결 및 상대방 ID를 확인해주세요.");
+      return;
+    }
+    if (!peerConnection) createPeerConnection();
+    if (!peerConnection) return;
+
+    const connected = await fetch(
+      `/api/is-connected/${encodeURIComponent(receiver)}`
+    )
+      .then((res) => res.json())
+      .catch(() => false);
+
+    if (!connected) {
+      alert("상대방이 아직 WebSocket에 연결되지 않았습니다.");
+      return;
+    }
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+
+    client.publish({
+      destination: "/app/signal",
+      body: JSON.stringify({
+        type: "offer",
+        to: receiver,
+        data: offer,
+      }),
+    });
+  };
+
+  const handleOffer = async (data) => {
+    if (!peerConnection) createPeerConnection();
+    if (!peerConnection) return;
+
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
+    remoteDescriptionSetRef.current = true;
+
+    for (const c of iceCandidateQueueRef.current) {
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    iceCandidateQueueRef.current = [];
+
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+
+    if (client) {
+      client.publish({
+        destination: "/app/signal",
+        body: JSON.stringify({
+          type: "answer",
+          to: data.from,
+          data: answer,
+        }),
       });
+    }
+    console.log("📞 Offer 수신 → Answer 전송 완료");
+  };
+
+  const handleAnswer = async (data) => {
+    if (!peerConnection) return;
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
+    remoteDescriptionSetRef.current = true;
+
+    for (const c of iceCandidateQueueRef.current) {
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    iceCandidateQueueRef.current = [];
+
+    console.log("✅ Answer 수신 완료");
+  };
+
+  const handleCandidate = (data) => {
+    if (!data.data) {
+      console.warn("ICE 후보 없음");
+      return;
+    }
+
+    if (remoteDescriptionSetRef.current && peerConnection) {
+      peerConnection
+        .addIceCandidate(new RTCIceCandidate(data.data))
+        .catch(console.error);
+    } else {
+      iceCandidateQueueRef.current.push(data.data);
     }
   };
 
   return (
-    <MainContainer>
-      <div className="flex flex-col justify-center p-4">
-        <h2 className="text-xl font-bold mb-4">영상통화 화면</h2>
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full max-w-md rounded-2xl shadow-lg border border-gray-300 bg-gray-200"
-        />
-
-        <div className="flex flex-col items-center gap-4 mt-4">
-          <img
-            src={isMicOn ? "/speak-on.png" : "/speak-off.png"}
-            alt="마이크 상태"
-            className="w-full h-full object-contain"
-          />
-
-          <div className="mt-4 space-x-2">
-            {!isCameraOn ? ( //카메라 켜기
-              <img src="/camera-on.png" onClick={startCamera} />
-            ) : (
-              //카메라 끄기
-              <img src="/camera-off.png" onClick={stopCamera} />
-            )}
-          </div>
-
-          {/* 통화 종료 버튼 */}
-          <img
-            src="/endcall.png"
-            alt="통화 종료"
-            onClick={() => navigate("/")}
-            className="mt-6 w-12 h-12 cursor-pointer hover:opacity-80"
-          />
-        </div>
-      </div>
-    </MainContainer>
+    <Container>
+      <LocalVideo ref={localVideoRef} autoPlay muted />
+      <RemoteVideo ref={remoteVideoRef} autoPlay />
+      <Spacer />
+      <InfoText>내 ID (자동 설정됨): {currentUser}</InfoText>
+      <InfoText>상대방 ID: {receiver}</InfoText>
+      <Button onClick={startMedia}>카메라 시작</Button>
+      <Button onClick={createOffer}>통화 시작</Button>
+    </Container>
   );
 };
 
 export default VideoCallScreen;
+
+// styled-components는 컴포넌트 함수 아래에 위치
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const LocalVideo = styled.video`
+  width: 70%;
+  border: 1px solid gray;
+`;
+
+const RemoteVideo = styled.video`
+  width: 20%;
+  border: 1px solid gray;
+  margin-top: 1rem;
+`;
+
+const Button = styled.button`
+  margin: 0.5rem;
+  padding: 0.6rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+
+  &:hover {
+    background-color: #0056b3;
+  }
+`;
+
+const InfoText = styled.p`
+  margin: 0.3rem 0;
+`;
+
+const Spacer = styled.div`
+  height: 1rem;
+`;
