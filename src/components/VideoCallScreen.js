@@ -1,127 +1,293 @@
-// import React, { useEffect, useRef, useState } from 'react';
-// import io, { Socket } from 'socket.io-client';
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
-// const VideoCallScreen = () => {
-//   const localVideoRef = useRef<HTMLVideoElement>(null);
-//   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-//   const [isStartedVideo, setIsStartedVideo] = useState<boolean>(false);
-//   const [room, setRoom] = useState<string>('test_room');
-//   const [socket, setSocket] = useState<Socket | null>(null);
-//   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
+const VideoCallScreen = ({ receiverId, receiver }) => {
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
 
-//   useEffect(() => {
-//     const nextSocket = io('http://123.123.123.123:5000'); // 자신의 시그널링 서버 IP 주소
-//     setSocket(nextSocket);
+  const [client, setClient] = useState(null);
+  const [peerConnection, setPeerConnection] = useState(null);
+  const localStreamRef = useRef(null);
+  const iceCandidateQueueRef = useRef([]);
+  const remoteDescriptionSetRef = useRef(false);
 
-//     // 구글에서 제공해주는 coturn 서버 활용
-//     const pc = new RTCPeerConnection({
-//       iceServers: [
-//         {
-//           urls: 'stun:stun.l.google.com:19302',
-//         },
-//         {
-//           urls: 'stun:stun1.l.google.com:19302',
-//         },
-//         {
-//           urls: 'stun:stun2.l.google.com:19302',
-//         },
-//         {
-//           urls: 'stun:stun3.l.google.com:19302',
-//         },
-//       ],
-//     });
+  const rtcConfig = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  };
 
-//     pc.onicecandidate = (event) => {
-//       if (!event.candidate) return;
-//       nextSocket.emit('candidate', { candidate: event.candidate, room });
-//     };
+  useEffect(() => {
+    if (!receiverId) return;
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      alert("JWT 토큰이 없습니다. 로그인 후 다시 시도해주세요.");
+      return;
+    }
 
-//     pc.ontrack = (event) => {
-//       if (!remoteVideoRef.current || !event.streams[0]) return;
-//       remoteVideoRef.current.srcObject = event.streams[0];
-//     };
+    const socket = new SockJS(
+      `http://localhost:8080/ws-signaling?token=${encodeURIComponent(
+        accessToken
+      )}`
+    );
 
-//     nextSocket.on('offer', async (msg) => {
-//       // 내가 보낸 offer인 경우, skip
-//       if (msg.sender === socket?.id) return;
+    const stompClient = new Client({
+      webSocketFactory: () => socket,
+      debug: (str) => console.log(str),
+      reconnectDelay: 5000,
+      heartbeatIncoming: 0,
+      heartbeatOutgoing: 0,
+      onConnect: (frame) => {
+        console.log("✅ WebSocket 연결됨:", frame);
+        stompClient.subscribe("/user/queue/signal", (message) => {
+          const data = JSON.parse(message.body);
+          switch (data.type) {
+            case "offer":
+              handleOffer(data);
+              break;
+            case "answer":
+              handleAnswer(data);
+              break;
+            case "candidate":
+              handleCandidate(data);
+              break;
+            default:
+              console.warn("알 수 없는 메시지 타입:", data.type);
+          }
+        });
+      },
+      onStompError: (frame) => {
+        alert("WebSocket 연결 실패: " + frame.headers["message"]);
+        console.error("❌ WebSocket 연결 실패:", frame);
+      },
+    });
 
-//       // connection에 상대 peer의 SDP 정보를 설정
-//       await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+    stompClient.activate();
+    setClient(stompClient);
 
-//       // 설정 이후 상대 peer에게 나의 SDP 응답
-//       const answer = await pc.createAnswer();
-//       await pc.setLocalDescription(answer);
-//       nextSocket.emit('answer', { sdp: pc.localDescription, room });
-//     });
+    return () => {
+      stompClient.deactivate();
+    };
+  }, [receiverId]);
 
-//     nextSocket.on('answer', (msg) => {
-//       if (msg.sender === socket?.id) return;
-//       // connection에 상대 peer에게 받은 SDP 정보를 설정
-//       pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-//     });
+  const startMedia = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      console.log("🎥 로컬 미디어 시작됨");
+    } catch (err) {
+      console.error("❌ 미디어 시작 실패:", err);
+      alert("카메라/마이크 권한을 확인해주세요.");
+    }
+  };
 
-//     nextSocket.on('candidate', (msg) => {
-//       if (msg.sender === socket?.id) return;
-//       // 데이터를 보낼 수 있는 네트워크 경로를 찾기 위해 ICE 프로세스를 수행하는 단계
-//       pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-//     });
+  const createPeerConnection = () => {
+    if (!localStreamRef.current) {
+      alert("먼저 미디어를 시작해주세요.");
+      return;
+    }
+    const pc = new RTCPeerConnection(rtcConfig);
 
-//     setPeerConnection(pc);
-//   }, []);
+    localStreamRef.current.getTracks().forEach((track) => {
+      pc.addTrack(track, localStreamRef.current);
+    });
 
-//   const startVideo = async () => {
-//     if (!localVideoRef.current) return;
-//     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-//     localVideoRef.current.srcObject = stream;
-//     stream.getTracks().forEach((track) => peerConnection?.addTrack(track, stream));
-//     setIsStartedVideo(true);
-//   };
+    pc.onicecandidate = (event) => {
+      if (event.candidate && client && receiver) {
+        client.publish({
+          destination: "/app/signal",
+          body: JSON.stringify({
+            type: "candidate",
+            to: receiver,
+            data: event.candidate,
+          }),
+        });
+      }
+    };
 
-//   const joinRoom = () => {
-//     if (!socket || !room) return;
-//     socket.emit('join', { room });
-//   };
+    pc.ontrack = (event) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
 
-//   const call = async () => {
-//     const offer = await peerConnection?.createOffer();
-//     await peerConnection?.setLocalDescription(offer);
-//     socket?.emit('offer', { sdp: offer, room });
-//   };
+    iceCandidateQueueRef.current = [];
+    remoteDescriptionSetRef.current = false;
+    setPeerConnection(pc);
+  };
 
-//   return (
-//     <div className="flex flex-col gap-6">
-//       <div className="flex justify-center gap-2">
-//         <div className="flex flex-col items-center">
-//           <div className="font-semibold">내 화면</div>
-//           <video ref={localVideoRef} autoPlay playsInline muted></video>
-//         </div>
-//         <div className="flex flex-col items-center">
-//           <div className="font-semibold">상대 화면</div>
-//           <video ref={remoteVideoRef} autoPlay playsInline></video>
-//         </div>
-//       </div>
-//       <div className="text-center font-semibold">Room Name: {room}</div>
-//       <div className="justify-center flex items-center gap-6">
-//         {!isStartedVideo && (
-//           <button
-//             className="shadow-md px-3 py-2 rounded hover:bg-slate-50 active:shadow-none"
-//             onClick={() => {
-//               startVideo();
-//               joinRoom();
-//             }}
-//           >
-//             비디오 연결
-//           </button>
-//         )}
-//         <button
-//           className="shadow-md px-3 py-2 rounded hover:bg-slate-50 active:shadow-none"
-//           onClick={call}
-//         >
-//           통화 시작
-//         </button>
-//       </div>
-//     </div>
-//   );
-// };
+  const createOffer = async () => {
+    if (!client || !receiver) {
+      alert("WebSocket 연결 및 상대방 ID를 확인해주세요.");
+      return;
+    }
+    if (!peerConnection) createPeerConnection();
+    if (!peerConnection) return;
 
-// export default VideoCallScreen;
+    const connected = await fetch(
+      `/api/is-connected/${encodeURIComponent(receiver)}`
+    )
+      .then((res) => res.json())
+      .catch(() => false);
+
+    if (!connected) {
+      alert("상대방이 아직 WebSocket에 연결되지 않았습니다.");
+      return;
+    }
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+
+    client.publish({
+      destination: "/app/signal",
+      body: JSON.stringify({
+        type: "offer",
+        to: receiver,
+        data: offer,
+      }),
+    });
+  };
+
+  const handleOffer = async (data) => {
+    if (!peerConnection) createPeerConnection();
+    if (!peerConnection) return;
+
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(data.data)
+    );
+    remoteDescriptionSetRef.current = true;
+
+    for (const c of iceCandidateQueueRef.current) {
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    iceCandidateQueueRef.current = [];
+
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+
+    if (client) {
+      client.publish({
+        destination: "/app/signal",
+        body: JSON.stringify({
+          type: "answer",
+          to: data.from,
+          data: answer,
+        }),
+      });
+    }
+    console.log("📞 Offer 수신 → Answer 전송 완료");
+  };
+
+  const handleAnswer = async (data) => {
+    if (!peerConnection) return;
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(data.data)
+    );
+    remoteDescriptionSetRef.current = true;
+
+    for (const c of iceCandidateQueueRef.current) {
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    iceCandidateQueueRef.current = [];
+
+    console.log("✅ Answer 수신 완료");
+  };
+
+  const handleCandidate = (data) => {
+    if (!data.data) {
+      console.warn("ICE 후보 없음");
+      return;
+    }
+
+    if (remoteDescriptionSetRef.current && peerConnection) {
+      peerConnection
+        .addIceCandidate(new RTCIceCandidate(data.data))
+        .catch(console.error);
+    } else {
+      iceCandidateQueueRef.current.push(data.data);
+    }
+  };
+
+  return (
+    <VideoContainer>
+      <LocalVideo ref={localVideoRef} autoPlay muted />
+      <RemoteVideo ref={remoteVideoRef} autoPlay />
+      <Spacer />
+      <InfoText>내 ID (자동 설정됨): {receiverId}</InfoText>
+      <InfoText>상대방 ID: {receiver}</InfoText>
+      <Button onClick={startMedia}>카메라 시작</Button>
+      <Button onClick={createOffer}>통화 시작</Button>
+    </VideoContainer>
+  );
+};
+
+export default VideoCallScreen;
+
+// styled-components는 컴포넌트 함수 아래에 위치
+
+const MainContainer = styled.div`
+  width: 100%;
+  height: 100vh;
+  background-color: black;
+  position: relative;
+`;
+
+const VideoContainer = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const LocalVideo = styled.video`
+  width: 60%;
+  border: 1px solid red; // 구분하기 쉬우라고 빨간색으로 예시
+  z-index: 2; // 더 위에 오게
+`;
+
+const RemoteVideo = styled.video`
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 20%;
+  border: 1px solid gray;
+  margin-top: 1rem;
+`;
+
+const Button = styled.button`
+  margin: 0.5rem;
+  padding: 0.6rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+
+  &:hover {
+    background-color: #0056b3;
+  }
+`;
+
+const InfoText = styled.p`
+  margin: 0.3rem 0;
+`;
+
+const Spacer = styled.div`
+  height: 1rem;
+`;

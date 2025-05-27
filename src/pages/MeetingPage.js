@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import ChatWindow from "../components/Chat";
-// import VideoCallScreen from "../components/VideoCallScreen";
+import VideoCallScreen from "../components/VideoCallScreen";
 
 export default function ResponsiveChatLayout() {
   const navigate = useNavigate();
@@ -15,17 +15,7 @@ export default function ResponsiveChatLayout() {
   return (
     <Container>
       <LeftPanel isChatOpen={chatOpen}>
-        <p
-          style={{
-            width: "100%",
-            height: "80vh",
-            backgroundColor: "#808080",
-            borderradius: "30px",
-          }}
-        >
-          영통화면
-        </p>
-        {/* <VideoCallScreen/> */}
+        <VideoCallScreen/>
         <ButtonSide>
           <img
             src="/camera-on.png"
