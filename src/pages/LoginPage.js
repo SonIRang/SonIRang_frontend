@@ -58,9 +58,9 @@ const LoginPage = () => {
   // 카카오 로그인
   const kakaologinHandler = () => {
     //카카오 로그인 키, 로그인화면면
-    const KAKAO_JS_KEY = "dfa74843084a17b061e610b1cce6b208"; // 개발자 센터에서 복사
+    const CLIENT_ID = "85fcaa39c8736077176b6c19a498acd5"; // 개발자 센터에서 복사
     const REDIRECT_URI = "http://localhost:3000/login/oauth/kakao"; //프론트 주소
-    const link = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_JS_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
+    const link = `https://kauth.kakao.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code`;
 
     //http://localhost:3000/login/oauth/kakao
 
@@ -161,7 +161,7 @@ const LoginPage = () => {
 export default LoginPage;
 
 const BackgroundDiv = styled.div`
-  height: calc(100vh - 80px);
+  height: 100vh;
   margin: 0;
   display: flex;
   justify-content: center;
@@ -180,8 +180,8 @@ const LeftPanel = styled.div`
 `;
 
 const RightPanel = styled.div`
-  width: 100vw;
-  height: calc(100vh - 80px);
+  width: 100%;
+  height: 100vh;
   background-color: #ffffff;
   gap: 10px;
   padding: 10px;
