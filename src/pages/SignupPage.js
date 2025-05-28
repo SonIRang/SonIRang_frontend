@@ -113,7 +113,7 @@ function SignupPage() {
           "403 오류 발생: 이메일 인증 없이 회원가입 허용 (예외 처리)"
         );
 
-        alert("⚠️ 이메일 인증 없이 회원가입되었습니다. (개발용 예외 처리)");
+        // alert("⚠️ 이메일 인증 없이 회원가입되었습니다. (개발용 예외 처리)");
         navigate("/login");
       } else if (err.response?.status === 400) {
         alert("입력값이 유효하지 않습니다.");
