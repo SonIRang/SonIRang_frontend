@@ -51,11 +51,12 @@ export default function ResponsiveChatLayout() {
 
 const Container = styled.div`
   display: flex;
-  height: 100vh;
-  overflow: hidden;
+  height: 85%;
+  // overflow: hidden;
 `;
 
 const LeftPanel = styled.div`
+height: calc(85%-30px);
   flex-grow: 1;
   padding: 5px;
   transition: margin-right 0.3s ease;
@@ -84,4 +85,5 @@ const RightPanel = styled.div`
   hight: 80%;
   padding: 5px;
   flex-direction: column;
+  // z-index: 1000;
 `;
