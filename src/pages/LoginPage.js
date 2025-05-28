@@ -17,7 +17,7 @@ const LoginPage = () => {
     console.log("🟢 handleLogin 호출됨");
 
     try {
-      const response = await fetch("/general-login", {
+      const response = await fetch("/api/users/general-login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
