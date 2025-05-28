@@ -26,7 +26,9 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
     }
 
     const socket = new SockJS(
-      `http://localhost:8080/ws-signaling?token=${encodeURIComponent(accessToken)}`
+      `http://localhost:8080/ws-signaling?token=${encodeURIComponent(
+        accessToken
+      )}`
     );
 
     const stompClient = new Client({
@@ -156,7 +158,9 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
     if (!peerConnection) createPeerConnection();
     if (!peerConnection) return;
 
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(data.data)
+    );
     remoteDescriptionSetRef.current = true;
 
     for (const c of iceCandidateQueueRef.current) {
@@ -186,7 +190,9 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
 
   const handleAnswer = async (data) => {
     if (!peerConnection) return;
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(data.data)
+    );
     remoteDescriptionSetRef.current = true;
 
     for (const c of iceCandidateQueueRef.current) {
@@ -217,7 +223,7 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
   };
 
   return (
-    <Container>
+    <VideoContainer>
       <LocalVideo ref={localVideoRef} autoPlay muted />
       <RemoteVideo ref={remoteVideoRef} autoPlay />
       <Spacer />
@@ -225,7 +231,7 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
       <InfoText>상대방 ID: {receiver}</InfoText>
       <Button onClick={startMedia}>카메라 시작</Button>
       <Button onClick={createOffer}>통화 시작</Button>
-    </Container>
+    </VideoContainer>
   );
 };
 
@@ -233,21 +239,30 @@ export default VideoCallScreen;
 
 // styled-components는 컴포넌트 함수 아래에 위치
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+const VideoContainer = styled.div`
+  position: relative;
+  width: 100%;
+  height: 80%;
 `;
 
 const LocalVideo = styled.video`
-  width: 70%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  // background-color: #808080;
   border: 1px solid gray;
+  z-index: 1;
 `;
 
 const RemoteVideo = styled.video`
-  width: 20%;
+  position: absolute;
+  // bottom: 1rem;
+  // right: 1rem;
+  width: 30%;
   border: 1px solid gray;
-  margin-top: 1rem;
+  z-index: 2;
 `;
 
 const Button = styled.button`
