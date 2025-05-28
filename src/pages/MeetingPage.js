@@ -23,7 +23,7 @@ export default function ResponsiveChatLayout() {
     <Container>
       <LeftPanel isChatOpen={chatOpen}>
         <VideoCallScreen currentUser={currentUser} receiver={receiver} />
-        <ButtonSide>
+        {/* <ButtonSide>
           <img
             src="/camera-on.png"
             alt="카메라"
@@ -42,7 +42,7 @@ export default function ResponsiveChatLayout() {
             className="w-10 h-10 cursor-pointer hover:opacity-80"
             onClick={() => navigate("/")}
           />
-        </ButtonSide>
+        </ButtonSide> */}
       </LeftPanel>
 
       <RightPanel>
@@ -63,6 +63,7 @@ const LeftPanel = styled.div`
   padding: 5px;
   transition: margin-right 0.3s ease;
   border-radius: 30px;
+  z-index: 1;
   margin-right: ${(props) => (props.isChatOpen ? "30%" : "0")};
 
   @media (max-width: 768px) {
@@ -85,4 +86,5 @@ const RightPanel = styled.div`
   height: 80%;
   padding: 5px;
   flex-direction: column;
+  z-index: 2;
 `;
