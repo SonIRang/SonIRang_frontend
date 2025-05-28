@@ -6,7 +6,6 @@ function ChatWindow({ isOpen, toggleChat }) {
   const [chat, setChat] = useState([
     { text: "안녕하세요!", isMe: false },
     { text: "반갑습니다.", isMe: true },
-    { text: "이 곳에 수화가 번역되어 전송됩니다.", isMe: true },
   ]);
 
   // const [chat, setChat] = useState([]); //백엔드 연동시
