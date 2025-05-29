@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import User from "../models/user";
-import AddFriendPopup from "../components/AddFriendPopup";
+import { useNavigate } from "react-router-dom";
+
+import MyProfilePopup from "../components/MyProfilePopup";
 import FriendList from "../components/FriendList";
 import FriendProfilePopup from "../components/FriendProfilePopup";
-import MyProfilePopup from "../components/MyProfilePopup";
-import { useNavigate } from "react-router-dom";
+import AddFriendPopup from "../components/AddFriendPopup";
+import EditProfilePopup from "../components/EditProfilePopup";
 
 function MainPage() {
   const navigate = useNavigate();
@@ -97,26 +99,33 @@ function MainPage() {
   const [search, setSearch] = useState("");
   const [popupType, setPopupType] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
-
+  
   const filteredFriends = friends.filter((friend) =>
     (friend.name ?? "").toLowerCase().includes((search ?? "").toLowerCase())
-  );
+);
 
-  const openAddFriendPopup = () => {
+const openAddFriendPopup = () => {
     setPopupType("addFriend");
     setSelectedFriend(null);
   };
-
+  
   const openProfilePopup = (friend) => {
     setPopupType("profile");
     setSelectedFriend(friend);
+  };
+  
+  const handleEditSave = (updatedUser) => {
+    localStorage.setItem("username", updatedUser.name);
+    localStorage.setItem("useremail", updatedUser.email);
+    localStorage.setItem("userbio", updatedUser.bio);
+    setPopupType("myProfile")
   };
 
   const closePopup = () => {
     setPopupType(null);
     setSelectedFriend(null);
   };
-
+  
   return (
     <MainContainer>
       <LeftSection>
@@ -164,11 +173,19 @@ function MainPage() {
           <LogoCenter src="/logo-title-ver2.png" alt="Main Logo" />
         )}
         {popupType === "myProfile" && (
-          <MyProfilePopup user={myUser} onClose={closePopup} />
+          <MyProfilePopup
+          key={myUser.email + myUser.name} // 프로필이 바뀌면 key도 바뀜
+          user={myUser}
+          onClose={closePopup}
+          onEditProfile={() => setPopupType("editProfile")}
+          />
         )}
         {popupType === "addFriend" && <AddFriendPopup onClose={closePopup} />}
         {popupType === "profile" && selectedFriend && (
           <FriendProfilePopup friend={selectedFriend} onClose={closePopup} />
+      )}
+        {popupType === "editProfile" && (
+          <EditProfilePopup user={myUser} onClose={closePopup} onSave={handleEditSave} />
         )}
       </RightPanel>
     </MainContainer>
