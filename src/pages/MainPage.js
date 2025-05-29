@@ -13,6 +13,7 @@ import EditProfilePopup from "../components/EditProfilePopup";
 function MainPage() {
   const navigate = useNavigate();
 
+  const [userId, setUserId] = useState(localStorage.getItem("userid"));
   const username = localStorage.getItem("username");
   const useremail = localStorage.getItem("useremail");
   const userbio = localStorage.getItem("userbio");
@@ -49,6 +50,7 @@ function MainPage() {
           const fetchedUserProfile =  response.data.data.profileImageUrl;
           localStorage.setItem("userid", fetchedUserId);
           localStorage.setItem("userprofile", fetchedUserProfile);
+          setUserId(fetchedUserId);
           console.log("userId 저장됨:", fetchedUserId);
         } else {
           console.warn("userId를 찾을 수 없습니다.");
