@@ -139,10 +139,10 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
   };
 
   const createPeerConnection = () => {
-    if (!localStreamRef.current) {
-      alert("먼저 미디어를 시작해주세요.");
-      return;
-    }
+    // if (!localStreamRef.current) {
+    //   alert("먼저 미디어를 시작해주세요.");
+    //   return;
+    // }
     const pc = new RTCPeerConnection(rtcConfig);
 
     localStreamRef.current.getTracks().forEach((track) => {
@@ -175,7 +175,7 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
 
   const createOffer = async () => {
     if (!client || !receiver) {
-      alert("WebSocket 연결 및 상대방 ID를 확인해주세요.");
+      alert("WebSocket 연결 및 상대방 이메일일를 확인해주세요.");
       return;
     }
     if (!peerConnection) createPeerConnection();
@@ -188,7 +188,7 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
       .catch(() => false);
 
     if (!connected) {
-      alert("상대방이 아직 WebSocket에 연결되지 않았습니다.");
+      alert(`${receiver} 님이 아직 WebSocket에 연결되지 않았습니다.`);
       return;
     }
 
@@ -344,28 +344,45 @@ const VideoContainer = styled.div`
 `;
 
 const VideoArea = styled.div`
-  margin-left: auto;
-  margin-right: auto;
+  margin: auto;
   width: 90%;
   max-height: 85vh;
   aspect-ratio: 16 / 9;
   position: relative;
+  border-radius: 20px;
+  overflow: hidden;
 `;
 
-// LocalVideo를 감싸는 래퍼 (중앙 이미지용)
-const LocalVideoWrapper = styled.div`
+// 상대방 비디오가 크게 나오는 영역
+const RemoteVideo = styled.video`
   width: 100%;
   height: 100%;
-  position: relative;
+  object-fit: cover;
+  background-color: black;
+  border-radius: 20px;
+  z-index: 1;
 `;
 
+// 내 비디오를 오른쪽 아래에 작게 띄우는 영역
+const LocalVideoWrapper = styled.div`
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 30%;
+  aspect-ratio: 16 / 9;
+  z-index: 2;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #bcbcbc;
+`;
+
+// 내 비디오
 const LocalVideo = styled.video`
   width: 100%;
-  max-height: 85vh; /* 버튼이 보이도록 제한 */
-  aspect-ratio: 16 / 9;
+  height: 100%;
   object-fit: cover;
-  border-radius: 20px;
-  background-color: ${(props) => (props.$isCameraReady ? "black" : "#BCBCBC")};
+  border-radius: 16px;
+  background-color: ${(props) => (props.$isCameraReady ? "black" : "#bcbcbc")};
 `;
 
 const CenterProfileImage = styled.img`
@@ -378,16 +395,6 @@ const CenterProfileImage = styled.img`
   border-radius: 50%;
   object-fit: cover;
   z-index: 2;
-`;
-
-const RemoteVideo = styled.video`
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  width: 30%;
-  background-color: black;
-  z-index: 3;
-  border-radius: 20px;
 `;
 
 const Button = styled.button`
