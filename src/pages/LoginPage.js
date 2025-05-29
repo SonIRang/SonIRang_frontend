@@ -6,6 +6,7 @@ import ToggleSwitch from "../components/ToggleSwitch";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [userid,setUserid] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,6 +42,7 @@ const LoginPage = () => {
 
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
+      localStorage.setItem("userid",data.userid);
       localStorage.setItem("username", data.username);
       localStorage.setItem("useremail", data.email);
       localStorage.setItem("userbio", data.userbio || ""); // userbio가 없으면 빈 문자열

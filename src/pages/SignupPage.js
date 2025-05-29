@@ -102,6 +102,10 @@ function SignupPage() {
       // 서버가 발급한 userid 받기
       const newUserId = response.data.userid;
 
+      localStorage.setItem("userid", newUserId);
+      localStorage.setItem("username", username);
+      localStorage.setItem("useremail", email);
+
       console.log("발급된 userid:", newUserId);
 
       alert("회원가입 완료!");
