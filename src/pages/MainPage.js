@@ -7,10 +7,11 @@ import { useNavigate } from "react-router-dom";
 import MyProfilePopup from "../components/MyProfilePopup";
 import FriendList from "../components/FriendList";
 import FriendProfilePopup from "../components/FriendProfilePopup";
-import MyProfilePopup from "../components/MyProfilePopup";
+import AddFriendPopup from "../components/AddFriendPopup";
+import EditProfilePopup from "../components/EditProfilePopup";
 import MeetingPage from "./MeetingPage";
 // import IncomingCallModal from "../components/IncomingCallModal";
-import { useNavigate } from "react-router-dom";
+
 
 function MainPage({ client }) {
   const navigate = useNavigate();
