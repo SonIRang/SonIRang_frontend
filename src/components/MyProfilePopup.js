@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 
-const MyProfilePopup = ({ user, onClose }) => {
+const MyProfilePopup = ({ user, onClose, onEditProfile }) => {
   const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -15,12 +15,6 @@ const MyProfilePopup = ({ user, onClose }) => {
     
   const handleSettingClick = () => {
     alert("구현중입니다");
-  };
-
-  const handleEditProfile = () => {
-    alert("구현중입니다");
-    // 추후 프로필 수정 페이지로 연결
-    // navigate("/edit-profile");
   };
 
   return (
@@ -40,7 +34,7 @@ const MyProfilePopup = ({ user, onClose }) => {
         {user.bio && user.bio.trim() !== "" ? user.bio : "작성된 자기소개가 없습니다."}
       </BioBox>
       <ButtonGroup>
-        <EditButton onClick={handleEditProfile}>프로필 수정하기</EditButton> 
+        <EditButton onClick={onEditProfile}>프로필 수정하기</EditButton> 
         <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton> 
       </ButtonGroup>
     </PopupContainer>
