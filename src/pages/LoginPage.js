@@ -6,7 +6,6 @@ import ToggleSwitch from "../components/ToggleSwitch";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [userid,setUserid] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,20 +32,20 @@ const LoginPage = () => {
 
       const data = await response.json();
 
-      const accessToken = data.accessToken; // 예: { accessToken: "xxx", refreshToken: "yyy" }
-      const refreshToken = data.refreshToken;
+      const { tokenResponse, user } = data;
 
-      if (!accessToken || !refreshToken) {
+      if (!tokenResponse?.accessToken || !tokenResponse?.refreshToken) {
         throw new Error("로그인 응답에 토큰이 없습니다.");
       }
 
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("userid",data.userid);
-      localStorage.setItem("username", data.username);
-      localStorage.setItem("useremail", data.email);
-      localStorage.setItem("userbio", data.userbio || ""); // userbio가 없으면 빈 문자열
-      localStorage.setItem("userprofile", data.userprofile || ""); // userprofile이 없으면 빈 문자열
+      localStorage.setItem("accessToken", tokenResponse.accessToken);
+      localStorage.setItem("refreshToken", tokenResponse.refreshToken);
+      localStorage.setItem("userid", user.userId);
+      localStorage.setItem("useremail", user.email);
+      localStorage.setItem("nickname", user.nickname);
+      localStorage.setItem("username", user.name);
+      localStorage.setItem("userbio", user.selfIntroduction || "");
+      localStorage.setItem("userprofile", user.profileImageUrl || "");
 
       setMessage("로그인 성공!");
       // 로그인 성공 후 메인 페이지 이동
