@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import ChatWindow from "../components/Chat";
 import VideoCallScreen from "../components/VideoCallScreen";
 
@@ -8,8 +8,8 @@ export default function ResponsiveChatLayout() {
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
 
-  const currentUser = localStorage.getItem("userEmail");
-  const receiver = localStorage.getItem("receiverEmail");
+  const location = useLocation();
+  const remoteId = location.state?.remoteId;
 
   const toggleChat = () => {
     setChatOpen((prev) => !prev);
@@ -22,7 +22,7 @@ export default function ResponsiveChatLayout() {
   return (
     <Container>
       <LeftPanel isChatOpen={chatOpen}>
-        <VideoCallScreen currentUser={currentUser} receiver={receiver} />
+        <VideoCallScreen remoteId={remoteId} />
         {/* <ButtonSide>
           <img
             src="/camera-on.png"
@@ -71,16 +71,16 @@ const LeftPanel = styled.div`
   }
 `;
 
-const ButtonSide = styled.div`
-  height: 15%;
-  margin-bottom: 30px;
-  display: flex;
-  background-color: #f2f2f7;
-  border-radius: 30px;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-`;
+// const ButtonSide = styled.div`
+//   height: 15%;
+//   margin-bottom: 30px;
+//   display: flex;
+//   background-color: #f2f2f7;
+//   border-radius: 30px;
+//   flex-direction: row;
+//   justify-content: center;
+//   align-items: center;
+// `;
 
 const RightPanel = styled.div`
   height: 80%;

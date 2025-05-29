@@ -6,9 +6,11 @@ import AddFriendPopup from "../components/AddFriendPopup";
 import FriendList from "../components/FriendList";
 import FriendProfilePopup from "../components/FriendProfilePopup";
 import MyProfilePopup from "../components/MyProfilePopup";
+import MeetingPage from "./MeetingPage";
+// import IncomingCallModal from "../components/IncomingCallModal";
 import { useNavigate } from "react-router-dom";
 
-function MainPage() {
+function MainPage({ client }) {
   const navigate = useNavigate();
 
   const username = localStorage.getItem("username");
@@ -16,8 +18,12 @@ function MainPage() {
   const userbio = localStorage.getItem("userbio");
   const userprofile = localStorage.getItem("userprofile");
 
+  const [incomingCallData, setIncomingCallData] = useState(null); // { from: callerId, data: offer }
+  const [showModal, setShowModal] = useState(false);
+  const [callAccepted, setCallAccepted] = useState(false);
+
   useEffect(() => {
-     // 사용자 정보 없으면 /login으로 리디렉트
+    // 사용자 정보 없으면 /login으로 리디렉트
     if (!username || !useremail) {
       navigate("/login");
     }
@@ -44,7 +50,7 @@ function MainPage() {
 
         if (response.status === 200 && response.data.data) {
           const fetchedUserId = response.data.data.userId;
-          const fetchedUserProfile =  response.data.data.profileImageUrl;
+          const fetchedUserProfile = response.data.data.profileImageUrl;
           localStorage.setItem("userid", fetchedUserId);
           localStorage.setItem("userprofile", fetchedUserProfile);
           console.log("userId 저장됨:", fetchedUserId);
@@ -93,7 +99,7 @@ function MainPage() {
 
     fetchFriends();
   }, []);
-  
+
   const [search, setSearch] = useState("");
   const [popupType, setPopupType] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
@@ -115,6 +121,33 @@ function MainPage() {
   const closePopup = () => {
     setPopupType(null);
     setSelectedFriend(null);
+  };
+
+  const handleSignalMessage = (data) => {
+    if (data.type === "offer") {
+      setIncomingCallData(data);
+      setShowModal(true);
+    }
+  };
+
+  const acceptCall = () => {
+    setShowModal(false);
+    // 수락 신호 서버에 보냄
+    client.publish({
+      destination: "/app/signal",
+      body: JSON.stringify({
+        type: "accept",
+        to: incomingCallData.from,
+      }),
+    });
+    // 미팅 페이지로 이동, 수락한 상대 ID 전달
+    navigate("/meeting", { state: { remoteId: incomingCallData.from } });
+  };
+
+  const rejectCall = () => {
+    setShowModal(false);
+    // 여기서 서버에 거절 신호 보낼 수도 있고 VideoCallScreen으로 넘겨도 됨
+    setIncomingCallData(null);
   };
 
   return (
@@ -171,6 +204,26 @@ function MainPage() {
           <FriendProfilePopup friend={selectedFriend} onClose={closePopup} />
         )}
       </RightPanel>
+
+      <div>
+        {showModal && (
+          <div className="modal">
+            <p>{incomingCallData.from}님이 통화를 요청합니다.</p>
+            <button onClick={acceptCall}>수락</button>
+            <button onClick={rejectCall}>거절</button>
+          </div>
+        )}
+
+        {callAccepted && (
+          <MeetingPage
+            incomingCallData={incomingCallData}
+            onEndCall={() => {
+              setCallAccepted(false);
+              setIncomingCallData(null);
+            }}
+          />
+        )}
+      </div>
     </MainContainer>
   );
 }

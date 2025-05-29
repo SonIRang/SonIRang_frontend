@@ -24,6 +24,8 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
   };
 
   useEffect(() => {
+    if (!receiver) return; // remoteId === receiver
+
     if (!currentUser) return;
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
@@ -74,7 +76,7 @@ const VideoCallScreen = ({ currentUser, receiver }) => {
     return () => {
       stompClient.deactivate();
     };
-  }, [currentUser]);
+  }, [receiver]);
 
   // 카메라만 시작
   const startCamera = async () => {
