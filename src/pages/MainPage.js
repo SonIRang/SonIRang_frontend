@@ -13,7 +13,7 @@ import EditProfilePopup from "../components/EditProfilePopup";
 function MainPage() {
   const navigate = useNavigate();
 
-  const [userId, setUserId] = useState(localStorage.getItem("userid"));
+  const userId = useState(localStorage.getItem("userid"));
   const username = localStorage.getItem("username");
   const useremail = localStorage.getItem("useremail");
   const userbio = localStorage.getItem("userbio");
@@ -27,6 +27,7 @@ function MainPage() {
   }, [navigate, username, useremail]);
 
   const myUser = new User({
+    userId: userId,
     profileImage: userprofile,
     name: username,
     email: useremail,
@@ -34,34 +35,6 @@ function MainPage() {
   });
 
   const [friends, setFriends] = useState([]);
-
-  // 이메일로 userId 가져오기
-  useEffect(() => {
-    const fetchUserIdByEmail = async () => {
-      if (!useremail) return;
-
-      try {
-        const response = await axios.get(
-          `/api/friends/search?email=${encodeURIComponent(useremail)}`
-        );
-
-        if (response.status === 200 && response.data.data) {
-          const fetchedUserId = response.data.data.userId;
-          const fetchedUserProfile =  response.data.data.profileImageUrl;
-          localStorage.setItem("userid", fetchedUserId);
-          localStorage.setItem("userprofile", fetchedUserProfile);
-          setUserId(fetchedUserId);
-          console.log("userId 저장됨:", fetchedUserId);
-        } else {
-          console.warn("userId를 찾을 수 없습니다.");
-        }
-      } catch (error) {
-        console.error("userId를 불러오는 데 실패했습니다:", error);
-      }
-    };
-
-    fetchUserIdByEmail();
-  }, [useremail]);
 
   // 친구 목록 불러오기
   useEffect(() => {
@@ -80,12 +53,12 @@ function MainPage() {
         const friendData = response.data.data.map(
           (friend) =>
             new User({
+              userId: friend.userId,
               name: friend.nickname,
               email: friend.email,
               profileImage: friend.profileImageUrl,
-              // 아직 서버에 구현 안 됨
-              //callHistory: ,
-              // bio: ,
+              lastCallTime: friend.lastCallTime,
+              lastCallDuration: friend.lastCallDuration,
             })
         );
 

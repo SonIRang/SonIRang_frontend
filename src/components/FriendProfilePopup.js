@@ -7,12 +7,14 @@ function FriendProfilePopup({ friend, onClose }) {
   const navigate = useNavigate();
 
   const handleCallClick = () => {
-    const receiverId = localStorage.getItem("receiverId");
+    const receiverId = friend.userId
+    alert("상대방 ID: "+ receiverId+"\n상대방 email: " + friend.email + "\n전화 연결을 시도합니다.");
     if (!receiverId) {
-      alert("상대방 ID가 localStorage에 없습니다.");
+      alert("상대방 ID가 정의되지 않았습니다.");
       return;
     }
-    navigate("/meeting", { state: { receiverId } });
+    localStorage.setItem("receiverId", receiverId);
+    navigate("/meeting");
   };
 
   const handleDeleteClick = async () => {
