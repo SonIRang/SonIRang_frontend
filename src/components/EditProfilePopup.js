@@ -9,11 +9,6 @@ const EditProfilePopup = ({ user, onClose, onSave }) => {
     const [password, setPassword] = useState('');
     
     const handleSave = async () => {
-        if (!password.trim()) {
-            alert("비밀번호를 입력해주세요.");
-            return;
-        }
-        
         const userId = localStorage.getItem("userid");
         if (!userId) {
             alert("사용자 ID를 찾을 수 없습니다.");
@@ -24,15 +19,14 @@ const EditProfilePopup = ({ user, onClose, onSave }) => {
             const response = await axios.put(`/api/users/info/${userId}`, {
                 name,
                 nickname,
-                selfIntroduction: bio,
-                password,
+                selfIntroduction: bio
             });
             
             if (response.status === 200) {
                 const updatedUser = {
                     ...user,
                     name,
-                    bio,
+                    bio
                 };
                 
                 // 저장 완료 → MainPage에서 MyProfilePopup 띄우게
@@ -55,18 +49,10 @@ const EditProfilePopup = ({ user, onClose, onSave }) => {
         />
 
       <InputLabel>이름</InputLabel>
-      <Input value={name} onChange={(e) => setName(e.target.value)} />
-
-      <InputLabel>닉네임</InputLabel>
-      <Input value={nickname} onChange={(e) => setNickname(e.target.value)} />
-
-      <InputLabel>비밀번호 변경</InputLabel>
-      <Input
-        type="password"
-        placeholder="새로운 비밀번호를 입력하세요"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        />
+      <Input value={name} onChange={(e) =>{ 
+        setName(e.target.value);
+        setNickname(e.target.value);
+      }} />
 
       <InputLabel>자기소개</InputLabel>
       <TextArea
