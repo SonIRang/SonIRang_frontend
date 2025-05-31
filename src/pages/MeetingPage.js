@@ -9,7 +9,7 @@ export default function ResponsiveChatLayout() {
   const [chatOpen, setChatOpen] = useState(false);
 
   const location = useLocation();
-  const receiverId = location.state?.receiverId;
+  const { callerId, offer, incoming } = location.state || {};
 
   const toggleChat = () => {
     setChatOpen((prev) => !prev);
@@ -22,7 +22,11 @@ export default function ResponsiveChatLayout() {
   return (
     <Container>
       <LeftPanel isChatOpen={chatOpen}>
-        <VideoCallScreen receiverId={receiverId} />
+        <VideoCallScreen
+          callerId={callerId}
+          offer={offer}
+          incoming={incoming}
+        />
         {/* <ButtonSide>
           <img
             src="/camera-on.png"

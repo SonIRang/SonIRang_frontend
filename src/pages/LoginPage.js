@@ -31,6 +31,7 @@ const LoginPage = () => {
       }
 
       const data = await response.json();
+        console.log("✅ 응답 내용:", data);
 
       const { tokenResponse, user } = data;
 

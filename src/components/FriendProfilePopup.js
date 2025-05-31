@@ -6,14 +6,14 @@ import axios from "axios";
 function FriendProfilePopup({ friend, onClose }) {
   const navigate = useNavigate();
 
-const handleCallClick = () => {
-  const receiverId = friend.email; // 또는 friend.id 등 실제 백엔드에서 내려주는 필드명 확인 필요
-  if (!receiverId) {
-    alert("상대방 ID가 존재하지 않습니다.");
-    return;
-  }
-  navigate("/meeting", { state: { receiverId } });
-};
+  const handleCallClick = () => {
+    const receiverId = friend.email; // 또는 friend.id 등 실제 백엔드에서 내려주는 필드명 확인 필요
+    if (!receiverId) {
+      alert("상대방 ID가 존재하지 않습니다.");
+      return;
+    }
+    navigate("/meeting", { state: { receiverId } });
+  };
 
   const handleDeleteClick = async () => {
     try {

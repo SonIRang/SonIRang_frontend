@@ -3,6 +3,8 @@ import axios from "axios";
 import styled from "styled-components";
 import User from "../models/user";
 import { useNavigate } from "react-router-dom";
+// import SockJS from "sockjs-client";
+// import { Client } from "@stomp/stompjs";
 
 import MyProfilePopup from "../components/MyProfilePopup";
 import FriendList from "../components/FriendList";
@@ -10,17 +12,21 @@ import FriendProfilePopup from "../components/FriendProfilePopup";
 import AddFriendPopup from "../components/AddFriendPopup";
 import EditProfilePopup from "../components/EditProfilePopup";
 import MeetingPage from "./MeetingPage";
-// import IncomingCallModal from "../components/IncomingCallModal";
+import { refreshAccessToken, isTokenExpired } from "../utils/token";
 
+// import IncomingCallModal from "../components/IncomingCallModal";
 
 function MainPage({ client }) {
   const navigate = useNavigate();
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [stompClient, setStompClient] = useState(null);
 
   const [userId, setUserId] = useState(localStorage.getItem("userid"));
   const username = localStorage.getItem("username");
   const useremail = localStorage.getItem("useremail");
   const userbio = localStorage.getItem("userbio");
   const userprofile = localStorage.getItem("userprofile");
+  const useraccesstoken = localStorage.getItem("accessToken");
 
   const [incomingCallData, setIncomingCallData] = useState(null); // { from: callerId, data: offer }
   const [showModal, setShowModal] = useState(false);
@@ -30,8 +36,9 @@ function MainPage({ client }) {
     // 사용자 정보 없으면 /login으로 리디렉트
     if (!username || !useremail) {
       navigate("/login");
+      return;
     }
-  }, [navigate, username, useremail]);
+  });
 
   const myUser = new User({
     profileImage: userprofile,
@@ -108,26 +115,26 @@ function MainPage({ client }) {
   const [search, setSearch] = useState("");
   const [popupType, setPopupType] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
-  
+
   const filteredFriends = friends.filter((friend) =>
     (friend.name ?? "").toLowerCase().includes((search ?? "").toLowerCase())
-);
+  );
 
-const openAddFriendPopup = () => {
+  const openAddFriendPopup = () => {
     setPopupType("addFriend");
     setSelectedFriend(null);
   };
-  
+
   const openProfilePopup = (friend) => {
     setPopupType("profile");
     setSelectedFriend(friend);
   };
-  
+
   const handleEditSave = (updatedUser) => {
     localStorage.setItem("username", updatedUser.name);
     localStorage.setItem("useremail", updatedUser.email);
     localStorage.setItem("userbio", updatedUser.bio);
-    setPopupType("myProfile")
+    setPopupType("myProfile");
   };
 
   const closePopup = () => {
@@ -135,34 +142,177 @@ const openAddFriendPopup = () => {
     setSelectedFriend(null);
   };
 
-  
-  const handleSignalMessage = (data) => {
-    if (data.type === "offer") {
-      setIncomingCallData(data);
-      setShowModal(true);
+  // const handleSignalMessage = (data) => {
+  //   if (data.type === "offer") {
+  //     setIncomingCallData(data);
+  //     setShowModal(true);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   const token = localStorage.getItem("accessToken");
+
+  //   const initializeWebSocket = async () => {
+  //     if (!token || isTokenExpired(token)) {
+  //       console.warn("⏳ 토큰이 없거나 만료됨. 재발급 시도.");
+  //       const newToken = await refreshAccessToken();
+  //       if (!newToken) {
+  //         console.error("❌ 토큰 재발급 실패");
+  //         return;
+  //       }
+  //       let token = newToken; // ⚠️ 재할당 필요시 let token 으로 선언
+  //     }
+  //   };
+
+  //   if (!token || !useremail) {
+  //     console.warn("⚠️ 토큰 또는 사용자 이메일이 없음. WebSocket 연결 생략.");
+  //     return;
+  //   }
+
+  //   const wsUrl = `ws://localhost:8080/ws-signaling?token=${encodeURIComponent(
+  //     token
+  //   )}`;
+  //   const socket = new WebSocket(wsUrl);
+
+  //   socket.onopen = () => {
+  //     console.log("✅ WebSocket connected");
+  //     socket.send("hello");
+  //   };
+
+  //   socket.onmessage = (event) => {
+  //     console.log("📨 Message received:", event.data);
+  //   };
+
+  //   socket.onerror = (err) => {
+  //     console.error("❌ WebSocket error:", err);
+  //   };
+
+  //   socket.onclose = () => {
+  //     console.log("🔌 WebSocket closed");
+  //   };
+  // }, [useremail]);
+
+  useEffect(() => {
+    let socket = null;
+    let isMounted = true;
+
+    const setupWebSocket = async () => {
+      let token = localStorage.getItem("accessToken");
+
+      if (!token || isTokenExpired(token)) {
+        console.warn("⏳ 토큰이 없거나 만료됨. 재발급 시도.");
+        const newToken = await refreshAccessToken();
+        if (!newToken) {
+          console.error("❌ 토큰 재발급 실패");
+          return;
+        }
+        token = newToken;
+      }
+
+      if (!token || !useremail) {
+        console.warn("⚠️ 토큰 또는 사용자 이메일이 없음. WebSocket 연결 생략.");
+        return;
+      }
+
+      const wsUrl = `ws://localhost:8080/ws-signaling?token=${encodeURIComponent(
+        token
+      )}`;
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => {
+        console.log("✅ WebSocket connected");
+        socket.send("hello");
+      };
+
+      socket.onmessage = (event) => {
+        console.log("📨 Message received:", event.data);
+      };
+
+      socket.onerror = (err) => {
+        console.error("❌ WebSocket error:", err);
+      };
+
+      socket.onclose = () => {
+        console.log("🔌 WebSocket closed");
+      };
+    };
+
+    setupWebSocket();
+
+    return () => {
+      isMounted = false;
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, [useremail]);
+
+  const handleAccept = () => {
+    if (!stompClient || !incomingCallData) return;
+
+    // 1) 상대방(통화요청자)에게 'answer-ready' 신호 보내기 (optional)
+    stompClient.publish({
+      destination: "/app/signal",
+      body: JSON.stringify({
+        type: "answer-ready",
+        to: incomingCallData.from,
+      }),
+    });
+
+    // 2) 화상통화 페이지로 이동하면서 offer 데이터 전달
+    navigate("/meeting", {
+      state: {
+        callerId: incomingCallData.from,
+        offer: incomingCallData.offer,
+        incoming: true,
+      },
+    });
+  };
+
+  const handleReject = () => {
+    if (stompClient && incomingCallData) {
+      stompClient.publish({
+        destination: "/app/signal",
+        body: JSON.stringify({
+          type: "reject",
+          to: incomingCallData.from,
+        }),
+      });
     }
+    setIncomingCallData(null);
   };
 
   const acceptCall = () => {
-    setShowModal(false);
-    // 수락 신호 서버에 보냄
-    client.publish({
-      destination: "/app/signal",
+    if (!stompClient || !incomingCallData) return;
+
+    // 상대방에게 수락 신호 보내기
+    stompClient.publish({
+      destination: "/api/signal/send",
       body: JSON.stringify({
         type: "accept",
         to: incomingCallData.from,
       }),
     });
-    // 미팅 페이지로 이동, 수락한 상대 ID 전달
-    navigate("/meeting", { state: { remoteId: incomingCallData.from } });
+
+    setCallAccepted(true);
+    setShowModal(false);
   };
 
   const rejectCall = () => {
+    if (!stompClient || !incomingCallData) return;
+
+    // 상대방에게 거절 신호 보내기
+    stompClient.publish({
+      destination: "/app/signal",
+      body: JSON.stringify({
+        type: "reject",
+        to: incomingCallData.from,
+      }),
+    });
+
     setShowModal(false);
-    // 여기서 서버에 거절 신호 보낼 수도 있고 VideoCallScreen으로 넘겨도 됨
     setIncomingCallData(null);
   };
-
 
   return (
     <MainContainer>
@@ -212,40 +362,37 @@ const openAddFriendPopup = () => {
         )}
         {popupType === "myProfile" && (
           <MyProfilePopup
-          key={myUser.email + myUser.name} // 프로필이 바뀌면 key도 바뀜
-          user={myUser}
-          onClose={closePopup}
-          onEditProfile={() => setPopupType("editProfile")}
+            key={myUser.email + myUser.name} // 프로필이 바뀌면 key도 바뀜
+            user={myUser}
+            onClose={closePopup}
+            onEditProfile={() => setPopupType("editProfile")}
           />
         )}
         {popupType === "addFriend" && <AddFriendPopup onClose={closePopup} />}
         {popupType === "profile" && selectedFriend && (
-          <FriendProfilePopup friend={selectedFriend} onClose={closePopup} />
-      )}
+          <FriendProfilePopup
+            client={stompClient}
+            friend={selectedFriend}
+            isSocketConnected={isSocketConnected}
+            onClose={closePopup}
+          />
+        )}
         {popupType === "editProfile" && (
-          <EditProfilePopup user={myUser} onClose={closePopup} onSave={handleEditSave} />
+          <EditProfilePopup
+            user={myUser}
+            onClose={closePopup}
+            onSave={handleEditSave}
+          />
         )}
       </RightPanel>
 
-      <div>
-        {showModal && (
-          <div className="modal">
-            <p>{incomingCallData.from}님이 통화를 요청합니다.</p>
-            <button onClick={acceptCall}>수락</button>
-            <button onClick={rejectCall}>거절</button>
-          </div>
-        )}
-
-        {callAccepted && (
-          <MeetingPage
-            incomingCallData={incomingCallData}
-            onEndCall={() => {
-              setCallAccepted(false);
-              setIncomingCallData(null);
-            }}
-          />
-        )}
-      </div>
+      {incomingCallData && (
+        <div style={{ padding: 10, border: "1px solid gray" }}>
+          <p>📞 {incomingCallData.from} 님의 통화 요청이 있습니다.</p>
+          <button onClick={handleAccept}>수락</button>
+          <button onClick={handleReject}>거절</button>
+        </div>
+      )}
     </MainContainer>
   );
 }
