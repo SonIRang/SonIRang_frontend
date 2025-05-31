@@ -25,6 +25,15 @@ function FriendList({ friends, onFriendClick }) {
               src="/callicon.png"
               onClick={(e) => {
                 e.stopPropagation(); // li 클릭 이벤트 막기
+                const receiverId = friend.userId
+                alert("상대방 ID: "+ receiverId+"\n상대방 email: " + friend.email + "\n전화 연결을 시도합니다.");
+                
+                if (!receiverId) {
+                  alert("상대방 ID가 localStorage에 없습니다.");
+                  return;
+                }
+                
+                localStorage.setItem("receiverId", receiverId);
                 navigate('/meeting');
               }}
               alt="call icon"
