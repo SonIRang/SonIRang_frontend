@@ -21,7 +21,7 @@ function MainPage({ client }) {
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [stompClient, setStompClient] = useState(null);
 
-  const [userId, setUserId] = useState(localStorage.getItem("userid"));
+  const userId = useState(localStorage.getItem("userid"));
   const username = localStorage.getItem("username");
   const useremail = localStorage.getItem("useremail");
   const userbio = localStorage.getItem("userbio");
@@ -41,6 +41,7 @@ function MainPage({ client }) {
   });
 
   const myUser = new User({
+    userId: userId,
     profileImage: userprofile,
     name: username,
     email: useremail,
@@ -77,6 +78,7 @@ function MainPage({ client }) {
     fetchUserIdByEmail();
   }, [useremail]);
 
+
   // 친구 목록 불러오기
   useEffect(() => {
     const fetchFriends = async () => {
@@ -94,12 +96,12 @@ function MainPage({ client }) {
         const friendData = response.data.data.map(
           (friend) =>
             new User({
+              userId: friend.userId,
               name: friend.nickname,
               email: friend.email,
               profileImage: friend.profileImageUrl,
-              // 아직 서버에 구현 안 됨
-              //callHistory: ,
-              // bio: ,
+              lastCallTime: friend.lastCallTime,
+              lastCallDuration: friend.lastCallDuration,
             })
         );
 
