@@ -65,7 +65,6 @@ function MainPage({ client }) {
           const fetchedUserProfile = response.data.data.profileImageUrl;
           localStorage.setItem("userid", fetchedUserId);
           localStorage.setItem("userprofile", fetchedUserProfile);
-          setUserId(fetchedUserId);
           console.log("userId 저장됨:", fetchedUserId);
         } else {
           console.warn("userId를 찾을 수 없습니다.");
@@ -77,7 +76,6 @@ function MainPage({ client }) {
 
     fetchUserIdByEmail();
   }, [useremail]);
-
 
   // 친구 목록 불러오기
   useEffect(() => {
@@ -150,47 +148,68 @@ function MainPage({ client }) {
   //     setShowModal(true);
   //   }
   // };
-
   // useEffect(() => {
-  //   const token = localStorage.getItem("accessToken");
+  //   let socket = null;
+  //   let isMounted = true;
 
-  //   const initializeWebSocket = async () => {
+  //   const setupWebSocket = async () => {
+  //     let token = localStorage.getItem("generalAccessToken");
+  //     const refreshToken = localStorage.getItem("generalRefreshToken");
+
+  //     console.log("accessToken:", token);
+  //     console.log("refreshToken:", refreshToken);
+
   //     if (!token || isTokenExpired(token)) {
   //       console.warn("⏳ 토큰이 없거나 만료됨. 재발급 시도.");
-  //       const newToken = await refreshAccessToken();
+  //       const newToken = await refreshAccessToken(refreshToken);
   //       if (!newToken) {
   //         console.error("❌ 토큰 재발급 실패");
   //         return;
   //       }
-  //       let token = newToken; // ⚠️ 재할당 필요시 let token 으로 선언
+  //       token = newToken;
   //     }
+
+  //     if (!token || !useremail) {
+  //       console.warn("⚠️ 토큰 또는 사용자 이메일이 없음. WebSocket 연결 생략.");
+  //       return;
+  //     }
+
+  //     const wsUrl =
+  //       window.location.hostname === "localhost"
+  //         ? "ws://localhost:8080/ws-signaling"
+  //         : "ws://15.164.249.16:8080/ws-signaling";
+
+  //     socket = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
+
+  //     socket.onopen = () => {
+  //       if (!isMounted) return;
+  //       console.log("✅ WebSocket connected");
+  //       socket.send("hello");
+  //     };
+
+  //     socket.onmessage = (event) => {
+  //       if (!isMounted) return;
+  //       console.log("📨 Message received:", event.data);
+  //     };
+
+  //     socket.onerror = (err) => {
+  //       if (!isMounted) return;
+  //       console.error("❌ WebSocket error:", err);
+  //     };
+
+  //     socket.onclose = (event) => {
+  //       if (!isMounted) return;
+  //       console.warn("WebSocket closed:", event.code, event.reason);
+  //     };
   //   };
 
-  //   if (!token || !useremail) {
-  //     console.warn("⚠️ 토큰 또는 사용자 이메일이 없음. WebSocket 연결 생략.");
-  //     return;
-  //   }
+  //   setupWebSocket();
 
-  //   const wsUrl = `ws://localhost:8080/ws-signaling?token=${encodeURIComponent(
-  //     token
-  //   )}`;
-  //   const socket = new WebSocket(wsUrl);
-
-  //   socket.onopen = () => {
-  //     console.log("✅ WebSocket connected");
-  //     socket.send("hello");
-  //   };
-
-  //   socket.onmessage = (event) => {
-  //     console.log("📨 Message received:", event.data);
-  //   };
-
-  //   socket.onerror = (err) => {
-  //     console.error("❌ WebSocket error:", err);
-  //   };
-
-  //   socket.onclose = () => {
-  //     console.log("🔌 WebSocket closed");
+  //   return () => {
+  //     isMounted = false;
+  //     if (socket) {
+  //       socket.close();
+  //     }
   //   };
   // }, [useremail]);
 
@@ -199,43 +218,39 @@ function MainPage({ client }) {
     let isMounted = true;
 
     const setupWebSocket = async () => {
-      let token = localStorage.getItem("accessToken");
+      const userid = localStorage.getItem("userid");
 
-      if (!token || isTokenExpired(token)) {
-        console.warn("⏳ 토큰이 없거나 만료됨. 재발급 시도.");
-        const newToken = await refreshAccessToken();
-        if (!newToken) {
-          console.error("❌ 토큰 재발급 실패");
-          return;
-        }
-        token = newToken;
-      }
-
-      if (!token || !useremail) {
-        console.warn("⚠️ 토큰 또는 사용자 이메일이 없음. WebSocket 연결 생략.");
+      if (!userid) {
+        console.warn("⚠️ 사용자 ID가 없습니다. WebSocket 연결 생략.");
         return;
       }
 
-      const wsUrl = `ws://localhost:8080/ws-signaling?token=${encodeURIComponent(
-        token
-      )}`;
-      socket = new WebSocket(wsUrl);
+      const wsUrl =
+        window.location.hostname === "localhost"
+          ? "ws://localhost:8080/ws-signaling"
+          : "ws://15.164.249.16:8080/ws-signaling";
+
+      socket = new WebSocket(`${wsUrl}?userid=${encodeURIComponent(userid)}`);
 
       socket.onopen = () => {
+        if (!isMounted) return;
         console.log("✅ WebSocket connected");
         socket.send("hello");
       };
 
       socket.onmessage = (event) => {
+        if (!isMounted) return;
         console.log("📨 Message received:", event.data);
       };
 
       socket.onerror = (err) => {
+        if (!isMounted) return;
         console.error("❌ WebSocket error:", err);
       };
 
-      socket.onclose = () => {
-        console.log("🔌 WebSocket closed");
+      socket.onclose = (event) => {
+        if (!isMounted) return;
+        console.warn("WebSocket closed:", event.code, event.reason);
       };
     };
 
@@ -247,7 +262,7 @@ function MainPage({ client }) {
         socket.close();
       }
     };
-  }, [useremail]);
+  }, [useremail]); // 또는 필요하면 useremail도 제거 가능
 
   const handleAccept = () => {
     if (!stompClient || !incomingCallData) return;
