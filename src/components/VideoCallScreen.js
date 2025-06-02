@@ -74,7 +74,7 @@ const VideoCallScreen = () => {
   };
 
   const connectWebSocket = () => {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken = localStorage.getItem("generalAccessToken");
     const user = localStorage.getItem("useremail");
     if (!accessToken || !user) {
       alert("JWT 또는 유저 정보가 없습니다.");
