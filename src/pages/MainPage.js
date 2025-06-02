@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import User from "../models/user";
-import { useNavigate } from "react-router-dom";
-import SockJS from "sockjs-client";
-// import { Client } from "@stomp/stompjs";
+import { useNavigate, useNavigate as useHistory } from "react-router-dom";
 import { useStompClient } from "../context/StompContext";
 
 import MyProfilePopup from "../components/MyProfilePopup";
@@ -12,13 +10,22 @@ import FriendList from "../components/FriendList";
 import FriendProfilePopup from "../components/FriendProfilePopup";
 import AddFriendPopup from "../components/AddFriendPopup";
 import EditProfilePopup from "../components/EditProfilePopup";
-import MeetingPage from "./MeetingPage";
+
+// 수신 알림 모달 컴포넌트
+const IncomingCallModal = ({ callerId, onAccept, onReject }) => {
+  return (
+    <ModalBackdrop>
+      <ModalContent>
+        <p>{callerId}님이 통화를 걸고 있습니다.</p>
+        <button onClick={onAccept}>수락</button>
+        <button onClick={onReject}>거절</button>
+      </ModalContent>
+    </ModalBackdrop>
+  );
+};
 
 function MainPage() {
   const navigate = useNavigate();
-  const [isSocketConnected, setIsSocketConnected] = useState(false);
-  // const [connected, setConnected] = useState(false);
-
   const { stompClient, connected } = useStompClient();
 
   const userId = localStorage.getItem("userid");
@@ -26,22 +33,9 @@ function MainPage() {
   const useremail = localStorage.getItem("useremail");
   const userbio = localStorage.getItem("userbio");
   const userprofile = localStorage.getItem("userprofile");
-  const useraccesstoken = localStorage.getItem("generalAccessToken");
-
-  const [incomingCallData, setIncomingCallData] = useState(null); // { from: callerId, data: offer }
-  const [showModal, setShowModal] = useState(false);
-  const [callAccepted, setCallAccepted] = useState(false);
-
-  useEffect(() => {
-    // 사용자 정보 없으면 /login으로 리디렉트
-    if (!username || !useremail) {
-      navigate("/login");
-      return;
-    }
-  });
 
   const myUser = new User({
-    userId: userId,
+    userId,
     profileImage: userprofile,
     name: username,
     email: useremail,
@@ -49,20 +43,24 @@ function MainPage() {
   });
 
   const [friends, setFriends] = useState([]);
+  const [search, setSearch] = useState("");
+  const [popupType, setPopupType] = useState(null);
+  const [selectedFriend, setSelectedFriend] = useState(null);
 
-  // 친구 목록 불러오기
+  const [incomingCallData, setIncomingCallData] = useState(null); // { from, data }
+
+  useEffect(() => {
+    if (!username || !useremail) {
+      navigate("/login");
+    }
+  }, []);
+
   useEffect(() => {
     const fetchFriends = async () => {
-      if (!userId) {
-        console.warn("userId 없음");
-        return;
-      }
-
       try {
         const response = await axios.get("/api/friends/list", {
           params: { userId },
         });
-
         const friendData = response.data.data.map(
           (friend) =>
             new User({
@@ -74,19 +72,13 @@ function MainPage() {
               lastCallDuration: friend.lastCallDuration,
             })
         );
-
         setFriends(friendData);
       } catch (error) {
-        console.error("친구 목록을 불러오는데 실패했습니다:", error);
+        console.error("❌ 친구 목록 로딩 실패:", error);
       }
     };
-
     fetchFriends();
   }, []);
-
-  const [search, setSearch] = useState("");
-  const [popupType, setPopupType] = useState(null);
-  const [selectedFriend, setSelectedFriend] = useState(null);
 
   const filteredFriends = friends.filter((friend) =>
     (friend.name ?? "").toLowerCase().includes((search ?? "").toLowerCase())
@@ -114,98 +106,52 @@ function MainPage() {
     setSelectedFriend(null);
   };
 
-  // const handleSignalMessage = (data) => {
-  //   if (data.type === "offer") {
-  //     setIncomingCallData(data);
-  //     setShowModal(true);
-  //   }
-  // };
-
-  // STOMP 연결 처리
-  // useEffect(() => {
-  //   if (!userId) return;
-
-  //   console.log("userid:", userId);
-  //   console.log("accessToken:", useraccesstoken);
-
-  //   const socketUrl = `http://15.164.249.16:8080/ws-signaling?token=${encodeURIComponent(
-  //     useraccesstoken
-  //   )}`;
-
-  //   const client = new Client({
-  //     webSocketFactory: () => new SockJS(socketUrl),
-  //     reconnectDelay: 5000,
-  //     debug: (str) => {
-  //       console.log(str);
-  //     },
-  //     onConnect: (frame) => {
-  //       console.log("STOMP 연결됨:", frame);
-  //       setConnected(true);
-
-  //       client.subscribe(`/user/queue/signal`, (msg) => {
-  //         const message = JSON.parse(msg.body);
-  //         console.log("수신 메시지:", message);
-  //         handleSignalMessage(message);
-  //       });
-  //     },
-  //     onStompError: (frame) => {
-  //       console.error("STOMP 에러:", frame.headers["message"]);
-  //     },
-  //     onWebSocketClose: (evt) => {
-  //       console.warn("WebSocket 연결 종료", evt);
-  //       setConnected(false);
-  //     },
-  //     onWebSocketError: (evt) => {
-  //       console.error("WebSocket 에러", evt);
-  //     },
-  //   });
-
-  //   client.activate();
-  //   stompClient.current = client;
-
-  //   return () => {
-  //     client.deactivate();
-  //     setConnected(false);
-  //   };
-  // }, [userId]);
-
+  // WebRTC 신호 수신 처리
   const handleSignalMessage = (message) => {
     const { type, from, data } = message;
-
-    switch (type) {
-      case "offer":
-        console.log("통화 요청 받음:", from);
-        setIncomingCallData({ from, data });
-        setShowModal(true); // IncomingCallModal 표시
-        break;
-      case "answer":
-        // WebRTC 연결 단계 처리
-        break;
-      case "ice-candidate":
-        // ICE 후보 추가
-        break;
-      default:
-        console.warn("알 수 없는 메시지 타입:", type);
+    if (type === "offer") {
+      setIncomingCallData({ from, data });
     }
   };
 
-  // stompClient가 준비되면 signal 메시지 수신 구독 설정
+  // STOMP 구독 처리
   useEffect(() => {
     if (!stompClient || !connected) return;
 
-    const subscription = stompClient.subscribe(`/user/queue/signal`, (msg) => {
+    const subscription = stompClient.subscribe("/user/queue/signal", (msg) => {
       const message = JSON.parse(msg.body);
-      console.log("수신 메시지:", message);
       handleSignalMessage(message);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [stompClient, connected]);
+
+  // 수신 수락/거절 핸들링
+  const acceptCall = () => {
+    navigate("/meeting", {
+      state: {
+        incoming: true,
+        receiverId: incomingCallData.from, // 수신자 ID 추가
+        offer: incomingCallData.data,
+      },
+    });
+    setIncomingCallData(null);
+  };
+
+  const rejectCall = () => {
+    setIncomingCallData(null);
+    // 필요 시 "거절" 신호 보내기
+  };
 
   return (
     <MainContainer>
+      {incomingCallData && (
+        <IncomingCallModal
+          callerId={incomingCallData.from}
+          onAccept={acceptCall}
+          onReject={rejectCall}
+        />
+      )}
       <LeftSection>
         <Header>
           <Logo src="/title.png" alt="Logo" />
@@ -252,7 +198,7 @@ function MainPage() {
         )}
         {popupType === "myProfile" && (
           <MyProfilePopup
-            key={myUser.email + myUser.name} // 프로필이 바뀌면 key도 바뀜
+            key={myUser.email + myUser.name}
             user={myUser}
             onClose={closePopup}
             onEditProfile={() => setPopupType("editProfile")}
@@ -263,7 +209,6 @@ function MainPage() {
           <FriendProfilePopup
             client={stompClient}
             friend={selectedFriend}
-            isSocketConnected={isSocketConnected}
             onClose={closePopup}
           />
         )}
@@ -396,4 +341,24 @@ const NoResultText = styled.p`
   color: #999;
   text-align: center;
   margin-top: 20px;
+`;
+
+const ModalBackdrop = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
 `;
