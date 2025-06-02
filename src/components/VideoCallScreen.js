@@ -1,97 +1,167 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import styled from "styled-components";
-import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
 const VideoCallScreen = () => {
-  const localVideoRef = useRef(null);
-  const localStreamRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-
   const location = useLocation();
-  const receiverId = location.state?.receiverId; // 전화 걸 친구 이메일
+  const receiverId = location.state?.receiverId;
+  const callerId = location.state?.callerId;
+  const offer = location.state?.offer;
+  const incoming = location.state?.incoming;
+
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const iceCandidateQueue = useRef([]);
 
   const [stompClient, setStompClient] = useState(null);
   const [peerConnection, setPeerConnection] = useState(null);
-  const [localStream, setLocalStream] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
-  const [callerId, setCallerId] = useState(null);
-  const [pendingOffer, setPendingOffer] = useState(null);
   const [remoteDescriptionSet, setRemoteDescriptionSet] = useState(false);
-  const iceCandidateQueue = useRef([]);
-  const [incomingCallVisible, setIncomingCallVisible] = useState(false);
 
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    const user = localStorage.getItem("useremail");
-    if (!token) alert("JWT 토큰이 없습니다. 로그인 후 다시 시도해주세요.");
-    if (!user) alert("유저 ID가 없습니다.");
-    setCurrentUserId(user || "");
-  }, []);
-
-const connectWebSocket = (handleAnswer, handleCandidate, closePeerConnection, setStompClient) => {
-  const accessToken = localStorage.getItem("accessToken");
-  if (!accessToken) {
-    alert("JWT 토큰이 없습니다. 로그인 후 다시 시도해주세요.");
-    return;
-  }
-
-  const stomp = new Client({
-    brokerURL: `ws://localhost:8080/ws-signaling?token=${encodeURIComponent(accessToken)}`,
-    reconnectDelay: 5000,
-    heartbeatIncoming: 0,
-    heartbeatOutgoing: 0,
-
-    onConnect: () => {
-      console.log("✅ MeetingPage WebSocket 연결됨");
-
-      stomp.subscribe("/user/queue/signal", (message) => {
-        const data = JSON.parse(message.body);
-
-        switch (data.type) {
-          case "answer":
-            handleAnswer(data);
-            break;
-
-          case "candidate":
-            handleCandidate(data);
-            break;
-
-          case "reject":
-            alert("상대방이 통화를 거절했습니다.");
-            closePeerConnection();
-            break;
-
-          case "end":
-            alert("상대방이 통화를 종료했습니다.");
-            closePeerConnection();
-            break;
-
-          default:
-            console.warn("⚠️ MeetingPage에서 알 수 없는 메시지 타입:", data.type);
-        }
-      });
-    },
-
-    onStompError: (frame) => {
-      console.error("❌ STOMP 에러 발생:", frame);
-    },
-  });
-
-  stomp.activate();
-  setStompClient(stomp);
-
-  return () => {
-    stomp.deactivate();
-    console.log("🔌 MeetingPage WebSocket 연결 해제됨");
+  const sendSignalToPeer = (type, to, data = null) => {
+    if (!stompClient) return;
+    stompClient.publish({
+      destination: "/app/signal",
+      body: JSON.stringify({ type, to, from: currentUserId, data }),
+    });
   };
-};
 
-  // 카메라 켜기 (트랙 새로 가져와서 추가, enabled는 true)
+  const createPeerConnection = () => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+
+    const stream = localStreamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    }
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        sendSignalToPeer("candidate", receiverId || callerId, e.candidate);
+      }
+    };
+
+    pc.ontrack = (e) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = e.streams[0];
+      }
+    };
+
+    setPeerConnection(pc);
+    setRemoteDescriptionSet(false);
+    iceCandidateQueue.current = [];
+
+    return pc;
+  };
+
+  const createOffer = async () => {
+    const pc = peerConnection || createPeerConnection();
+    if (!pc) return;
+
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sendSignalToPeer("offer", receiverId, offer);
+    } catch (err) {
+      console.error("❌ Offer 생성 실패:", err);
+    }
+  };
+
+  const connectWebSocket = () => {
+    const accessToken = localStorage.getItem("accessToken");
+    const user = localStorage.getItem("useremail");
+    if (!accessToken || !user) {
+      alert("JWT 또는 유저 정보가 없습니다.");
+      return;
+    }
+    setCurrentUserId(user);
+
+    const client = new Client({
+      brokerURL: `ws://localhost:8080/ws-signaling?token=${encodeURIComponent(
+        accessToken
+      )}`,
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log("✅ WebSocket 연결됨");
+
+        client.subscribe("/user/queue/signal", async (message) => {
+          const data = JSON.parse(message.body);
+
+          switch (data.type) {
+            case "answer":
+              handleAnswer(data.data);
+              break;
+            case "candidate":
+              handleCandidate(data.data);
+              break;
+            case "end":
+              closePeerConnection();
+              break;
+            default:
+              console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
+          }
+        });
+
+        if (receiverId) {
+          createOffer();
+        }
+      },
+      onStompError: (frame) => {
+        console.error("❌ STOMP 에러:", frame);
+      },
+    });
+
+    client.activate();
+    setStompClient(client);
+  };
+
+  const handleAnswer = async (answer) => {
+    try {
+      await peerConnection.setRemoteDescription(
+        new RTCSessionDescription(answer)
+      );
+      setRemoteDescriptionSet(true);
+      for (const c of iceCandidateQueue.current) {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+      }
+      iceCandidateQueue.current = [];
+    } catch (err) {
+      console.error("❌ Answer 처리 실패:", err);
+    }
+  };
+
+  const handleCandidate = (candidate) => {
+    if (!candidate) return;
+    if (remoteDescriptionSet && peerConnection) {
+      peerConnection
+        .addIceCandidate(new RTCIceCandidate(candidate))
+        .catch(console.error);
+    } else {
+      iceCandidateQueue.current.push(candidate);
+    }
+  };
+
+  const closePeerConnection = () => {
+    if (peerConnection) {
+      peerConnection.close();
+      setPeerConnection(null);
+    }
+    setRemoteDescriptionSet(false);
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    console.log("🔚 PeerConnection 종료");
+  };
+
+  const endCall = () => {
+    sendSignalToPeer("end", receiverId || callerId);
+    closePeerConnection();
+  };
+
   const startCamera = async () => {
     try {
       const cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -103,14 +173,13 @@ const connectWebSocket = (handleAnswer, handleCandidate, closePeerConnection, se
         localStreamRef.current = new MediaStream();
       }
 
-      // 기존 비디오 트랙 제거 및 중지
       const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
       if (oldVideoTrack) {
         localStreamRef.current.removeTrack(oldVideoTrack);
         oldVideoTrack.stop();
       }
 
-      videoTrack.enabled = true; // 활성화 상태
+      videoTrack.enabled = true;
       localStreamRef.current.addTrack(videoTrack);
 
       if (localVideoRef.current) {
@@ -125,7 +194,6 @@ const connectWebSocket = (handleAnswer, handleCandidate, closePeerConnection, se
     }
   };
 
-  // 마이크 켜기 (트랙 새로 가져와서 추가, enabled는 true)
   const startMic = async () => {
     try {
       const micStream = await navigator.mediaDevices.getUserMedia({
@@ -137,14 +205,13 @@ const connectWebSocket = (handleAnswer, handleCandidate, closePeerConnection, se
         localStreamRef.current = new MediaStream();
       }
 
-      // 기존 오디오 트랙 제거 및 중지
       const oldAudioTrack = localStreamRef.current.getAudioTracks()[0];
       if (oldAudioTrack) {
         localStreamRef.current.removeTrack(oldAudioTrack);
         oldAudioTrack.stop();
       }
 
-      audioTrack.enabled = true; // 활성화 상태
+      audioTrack.enabled = true;
       localStreamRef.current.addTrack(audioTrack);
 
       setIsMicOn(true);
@@ -155,145 +222,29 @@ const connectWebSocket = (handleAnswer, handleCandidate, closePeerConnection, se
     }
   };
 
-  const createPeerConnection = () => {
-    const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-    const pc = new RTCPeerConnection(config);
+  useEffect(() => {
+    connectWebSocket();
+    startCamera();
+    startMic();
 
-    if (localStream) {
-      localStream
-        .getTracks()
-        .forEach((track) => pc.addTrack(track, localStream));
+    // ✅ 내가 거는 쪽(caller)일 때 자동으로 offer 생성
+    if (!incoming && callerId && receiverId) {
+      const tryOffer = async () => {
+        // 카메라, 마이크가 다 준비되고 나서 약간의 시간 여유를 줌 (필요 시 제거 가능)
+        await new Promise((res) => setTimeout(res, 1000));
+        await createOffer(); // offer 생성 및 sendSignalToPeer 내부 호출
+      };
+      tryOffer();
     }
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate && stompClient) {
-        stompClient.publish({
-          destination: "/app/signal",
-          body: JSON.stringify({
-            type: "candidate",
-            to: receiverId,
-            from: currentUserId,
-            data: event.candidate,
-          }),
-        });
+    return () => {
+      if (stompClient) {
+        stompClient.deactivate();
+        console.log("🔌 MeetingPage WebSocket 연결 해제됨");
       }
+      closePeerConnection();
     };
-
-    pc.ontrack = (event) => {
-      if (remoteVideoRef.current)
-        remoteVideoRef.current.srcObject = event.streams[0];
-    };
-
-    iceCandidateQueue.current = [];
-    setRemoteDescriptionSet(false);
-    setPeerConnection(pc);
-    return pc;
-  };
-
-  const createOffer = async () => {
-    if (!stompClient) {
-      alert("서버에 연결되지 않았습니다.");
-      return;
-    }
-
-    const pc = peerConnection || createPeerConnection();
-    if (!pc) return;
-
-    try {
-      const res = await fetch(
-        `/api/is-connected/${encodeURIComponent(receiverId)}`,
-        {
-          method: "GET",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-
-      if (!res.ok) {
-        alert(`서버 응답 오류: ${res.status}`);
-        return;
-      }
-
-      const connected = await res.json();
-
-      if (!connected) {
-        alert("상대방이 아직 WebSocket에 연결되지 않았습니다.");
-        return;
-      }
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      stompClient.publish({
-        destination: "/app/signal",
-        body: JSON.stringify({
-          type: "offer",
-          to: receiverId,
-          data: offer,
-        }),
-      });
-    } catch (err) {
-      console.error(err);
-      alert("통화 시작 중 오류가 발생했습니다.");
-    }
-  };
-
-  const handleIncomingCall = (data) => {
-    setCallerId(data.from);
-    setPendingOffer(data.data);
-    setIncomingCallVisible(true);
-  };
-
-  const handleAnswer = async (data) => {
-    try {
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(data.data)
-      );
-      setRemoteDescriptionSet(true);
-      for (const c of iceCandidateQueue.current) {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(c));
-      }
-      iceCandidateQueue.current = [];
-      console.log("✅ Answer 수신 완료");
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleCandidate = (data) => {
-    if (!data.data) return;
-    if (remoteDescriptionSet && peerConnection) {
-      peerConnection
-        .addIceCandidate(new RTCIceCandidate(data.data))
-        .catch(console.error);
-    } else {
-      iceCandidateQueue.current.push(data.data);
-    }
-  };
-
-  const closePeerConnection = () => {
-    if (peerConnection) {
-      peerConnection.close();
-      setPeerConnection(null);
-    }
-    setRemoteDescriptionSet(false);
-    iceCandidateQueue.current = [];
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-  };
-
-  const endCall = () => {
-    if (!stompClient) return;
-    stompClient.publish({
-      destination: "/app/signal",
-      body: JSON.stringify({
-        type: "end",
-        to: callerId || receiverId,
-      }),
-    });
-    closePeerConnection();
-    console.log("🔚 통화 종료");
-  };
+  }, []);
 
   return (
     <div>
@@ -319,40 +270,37 @@ const connectWebSocket = (handleAnswer, handleCandidate, closePeerConnection, se
         />
       </div>
 
-      <button onClick={connectWebSocket}>서버 연결</button>
-      {/* 카메라 on/off 아이콘 버튼 */}
       <IconButton
         src={isCameraOn ? "/camera-on.png" : "/camera-off.png"}
         alt="카메라"
         onClick={() => {
           if (isCameraOn) {
             const track = localStreamRef.current?.getVideoTracks()[0];
-            if (track) track.enabled = false; // 비활성화
+            if (track) track.enabled = false;
             setIsCameraOn(false);
-            console.log("📷 카메라 끔 (track.enabled = false)");
+            console.log("📷 카메라 끔");
           } else {
             startCamera();
           }
         }}
       />
 
-      {/* 마이크 on/off 아이콘 버튼 */}
       <IconButton
         src={isMicOn ? "/mic-on.png" : "/mic-off.png"}
         alt="마이크"
         onClick={() => {
           if (isMicOn) {
             const track = localStreamRef.current?.getAudioTracks()[0];
-            if (track) track.enabled = false; // 비활성화
+            if (track) track.enabled = false;
             setIsMicOn(false);
-            console.log("🎤 마이크 끔 (track.enabled = false)");
+            console.log("🎤 마이크 끔");
           } else {
             startMic();
           }
         }}
       />
-      <button onClick={createOffer}>통화 시작</button>
 
+      <button onClick={createOffer}>통화 시작</button>
       <button onClick={endCall}>통화 종료</button>
     </div>
   );
