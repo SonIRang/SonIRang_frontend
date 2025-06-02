@@ -49,33 +49,6 @@ function MainPage() {
 
   const [friends, setFriends] = useState([]);
 
-  // 이메일로 userId 가져오기
-  useEffect(() => {
-    const fetchUserIdByEmail = async () => {
-      if (!useremail) return;
-
-      try {
-        const response = await axios.get(
-          `/api/friends/search?email=${encodeURIComponent(useremail)}`
-        );
-
-        if (response.status === 200 && response.data.data) {
-          const fetchedUserId = response.data.data.userId;
-          const fetchedUserProfile = response.data.data.profileImageUrl;
-          localStorage.setItem("userid", fetchedUserId);
-          localStorage.setItem("userprofile", fetchedUserProfile);
-          console.log("userId 저장됨:", fetchedUserId);
-        } else {
-          console.warn("userId를 찾을 수 없습니다.");
-        }
-      } catch (error) {
-        console.error("userId를 불러오는 데 실패했습니다:", error);
-      }
-    };
-
-    fetchUserIdByEmail();
-  }, [useremail]);
-
   // 친구 목록 불러오기
   useEffect(() => {
     const fetchFriends = async () => {
