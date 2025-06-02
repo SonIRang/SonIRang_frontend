@@ -28,7 +28,7 @@ const VideoCallScreen = () => {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
   const [callAccepted, setCallAccepted] = useState(false);
-  
+
   useEffect(() => {
     peerConnectionRef.current = peerConnection;
   }, [peerConnection]);
