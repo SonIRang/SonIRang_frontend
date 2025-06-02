@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import User from "../models/user";
 import { useNavigate } from "react-router-dom";
-// import SockJS from "sockjs-client";
-// import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
 
 import MyProfilePopup from "../components/MyProfilePopup";
 import FriendList from "../components/FriendList";
@@ -12,16 +12,15 @@ import FriendProfilePopup from "../components/FriendProfilePopup";
 import AddFriendPopup from "../components/AddFriendPopup";
 import EditProfilePopup from "../components/EditProfilePopup";
 import MeetingPage from "./MeetingPage";
-import { refreshAccessToken, isTokenExpired } from "../utils/token";
 
-// import IncomingCallModal from "../components/IncomingCallModal";
-
-function MainPage({ client }) {
+function MainPage() {
   const navigate = useNavigate();
   const [isSocketConnected, setIsSocketConnected] = useState(false);
-  const [stompClient, setStompClient] = useState(null);
+  const [connected, setConnected] = useState(false);
 
-  const userId = useState(localStorage.getItem("userid"));
+  const stompClient = useRef(null); // useRef로 변경
+
+  const userId = localStorage.getItem("userid");
   const username = localStorage.getItem("username");
   const useremail = localStorage.getItem("useremail");
   const userbio = localStorage.getItem("userbio");
@@ -80,7 +79,6 @@ function MainPage({ client }) {
   // 친구 목록 불러오기
   useEffect(() => {
     const fetchFriends = async () => {
-      const userId = localStorage.getItem("userid");
       if (!userId) {
         console.warn("userId 없음");
         return;
@@ -148,187 +146,72 @@ function MainPage({ client }) {
   //     setShowModal(true);
   //   }
   // };
-  // useEffect(() => {
-  //   let socket = null;
-  //   let isMounted = true;
 
-  //   const setupWebSocket = async () => {
-  //     let token = localStorage.getItem("generalAccessToken");
-  //     const refreshToken = localStorage.getItem("generalRefreshToken");
-
-  //     console.log("accessToken:", token);
-  //     console.log("refreshToken:", refreshToken);
-
-  //     if (!token || isTokenExpired(token)) {
-  //       console.warn("⏳ 토큰이 없거나 만료됨. 재발급 시도.");
-  //       const newToken = await refreshAccessToken(refreshToken);
-  //       if (!newToken) {
-  //         console.error("❌ 토큰 재발급 실패");
-  //         return;
-  //       }
-  //       token = newToken;
-  //     }
-
-  //     if (!token || !useremail) {
-  //       console.warn("⚠️ 토큰 또는 사용자 이메일이 없음. WebSocket 연결 생략.");
-  //       return;
-  //     }
-
-  //     const wsUrl =
-  //       window.location.hostname === "localhost"
-  //         ? "ws://localhost:8080/ws-signaling"
-  //         : "ws://15.164.249.16:8080/ws-signaling";
-
-  //     socket = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
-
-  //     socket.onopen = () => {
-  //       if (!isMounted) return;
-  //       console.log("✅ WebSocket connected");
-  //       socket.send("hello");
-  //     };
-
-  //     socket.onmessage = (event) => {
-  //       if (!isMounted) return;
-  //       console.log("📨 Message received:", event.data);
-  //     };
-
-  //     socket.onerror = (err) => {
-  //       if (!isMounted) return;
-  //       console.error("❌ WebSocket error:", err);
-  //     };
-
-  //     socket.onclose = (event) => {
-  //       if (!isMounted) return;
-  //       console.warn("WebSocket closed:", event.code, event.reason);
-  //     };
-  //   };
-
-  //   setupWebSocket();
-
-  //   return () => {
-  //     isMounted = false;
-  //     if (socket) {
-  //       socket.close();
-  //     }
-  //   };
-  // }, [useremail]);
-
+  // STOMP 연결 처리
   useEffect(() => {
-    let socket = null;
-    let isMounted = true;
+    if (!userId) return;
 
-    const setupWebSocket = async () => {
-      const userid = localStorage.getItem("userid");
+    console.log("userid:", userId);
 
-      if (!userid) {
-        console.warn("⚠️ 사용자 ID가 없습니다. WebSocket 연결 생략.");
-        return;
-      }
+    const socketUrl = `http://localhost:8080/ws-signaling?user-id=${encodeURIComponent(
+      userId
+    )}`;
 
-      const wsUrl =
-        window.location.hostname === "localhost"
-          ? "ws://localhost:8080/ws-signaling"
-          : "ws://15.164.249.16:8080/ws-signaling";
+    const client = new Client({
+      webSocketFactory: () => new SockJS(socketUrl),
+      reconnectDelay: 5000,
+      debug: (str) => {
+        console.log(str);
+      },
+      onConnect: (frame) => {
+        console.log("STOMP 연결됨:", frame);
+        setConnected(true);
 
-      socket = new WebSocket(`${wsUrl}?userid=${encodeURIComponent(userid)}`);
-
-      socket.onopen = () => {
-        if (!isMounted) return;
-        console.log("✅ WebSocket connected");
-        socket.send("hello");
-      };
-
-      socket.onmessage = (event) => {
-        if (!isMounted) return;
-        console.log("📨 Message received:", event.data);
-      };
-
-      socket.onerror = (err) => {
-        if (!isMounted) return;
-        console.error("❌ WebSocket error:", err);
-      };
-
-      socket.onclose = (event) => {
-        if (!isMounted) return;
-        console.warn("WebSocket closed:", event.code, event.reason);
-      };
-    };
-
-    setupWebSocket();
-
-    return () => {
-      isMounted = false;
-      if (socket) {
-        socket.close();
-      }
-    };
-  }, [useremail]); // 또는 필요하면 useremail도 제거 가능
-
-  const handleAccept = () => {
-    if (!stompClient || !incomingCallData) return;
-
-    // 1) 상대방(통화요청자)에게 'answer-ready' 신호 보내기 (optional)
-    stompClient.publish({
-      destination: "/app/signal",
-      body: JSON.stringify({
-        type: "answer-ready",
-        to: incomingCallData.from,
-      }),
-    });
-
-    // 2) 화상통화 페이지로 이동하면서 offer 데이터 전달
-    navigate("/meeting", {
-      state: {
-        callerId: incomingCallData.from,
-        offer: incomingCallData.offer,
-        incoming: true,
+        client.subscribe(`/user/queue/signal`, (msg) => {
+          const message = JSON.parse(msg.body);
+          console.log("수신 메시지:", message);
+          handleSignalMessage(message);
+        });
+      },
+      onStompError: (frame) => {
+        console.error("STOMP 에러:", frame.headers["message"]);
+      },
+      onWebSocketClose: (evt) => {
+        console.warn("WebSocket 연결 종료", evt);
+        setConnected(false);
+      },
+      onWebSocketError: (evt) => {
+        console.error("WebSocket 에러", evt);
       },
     });
-  };
 
-  const handleReject = () => {
-    if (stompClient && incomingCallData) {
-      stompClient.publish({
-        destination: "/app/signal",
-        body: JSON.stringify({
-          type: "reject",
-          to: incomingCallData.from,
-        }),
-      });
+    client.activate();
+    stompClient.current = client;
+
+    return () => {
+      client.deactivate();
+      setConnected(false);
+    };
+  }, [userId]);
+
+  const handleSignalMessage = (message) => {
+    const { type, from, data } = message;
+
+    switch (type) {
+      case "offer":
+        console.log("통화 요청 받음:", from);
+        setIncomingCallData({ from, data });
+        setShowModal(true); // IncomingCallModal 표시
+        break;
+      case "answer":
+        // WebRTC 연결 단계 처리
+        break;
+      case "ice-candidate":
+        // ICE 후보 추가
+        break;
+      default:
+        console.warn("알 수 없는 메시지 타입:", type);
     }
-    setIncomingCallData(null);
-  };
-
-  const acceptCall = () => {
-    if (!stompClient || !incomingCallData) return;
-
-    // 상대방에게 수락 신호 보내기
-    stompClient.publish({
-      destination: "/api/signal/send",
-      body: JSON.stringify({
-        type: "accept",
-        to: incomingCallData.from,
-      }),
-    });
-
-    setCallAccepted(true);
-    setShowModal(false);
-  };
-
-  const rejectCall = () => {
-    if (!stompClient || !incomingCallData) return;
-
-    // 상대방에게 거절 신호 보내기
-    stompClient.publish({
-      destination: "/app/signal",
-      body: JSON.stringify({
-        type: "reject",
-        to: incomingCallData.from,
-      }),
-    });
-
-    setShowModal(false);
-    setIncomingCallData(null);
   };
 
   return (
@@ -402,14 +285,6 @@ function MainPage({ client }) {
           />
         )}
       </RightPanel>
-
-      {incomingCallData && (
-        <div style={{ padding: 10, border: "1px solid gray" }}>
-          <p>📞 {incomingCallData.from} 님의 통화 요청이 있습니다.</p>
-          <button onClick={handleAccept}>수락</button>
-          <button onClick={handleReject}>거절</button>
-        </div>
-      )}
     </MainContainer>
   );
 }
