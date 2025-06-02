@@ -4,7 +4,8 @@ import styled from "styled-components";
 import User from "../models/user";
 import { useNavigate } from "react-router-dom";
 import SockJS from "sockjs-client";
-import { Client } from "@stomp/stompjs";
+// import { Client } from "@stomp/stompjs";
+import { useStompClient } from "../context/StompContext";
 
 import MyProfilePopup from "../components/MyProfilePopup";
 import FriendList from "../components/FriendList";
@@ -16,9 +17,9 @@ import MeetingPage from "./MeetingPage";
 function MainPage() {
   const navigate = useNavigate();
   const [isSocketConnected, setIsSocketConnected] = useState(false);
-  const [connected, setConnected] = useState(false);
+  // const [connected, setConnected] = useState(false);
 
-  const stompClient = useRef(null); // useRef로 변경
+  const { stompClient, connected } = useStompClient();
 
   const userId = localStorage.getItem("userid");
   const username = localStorage.getItem("username");
@@ -121,52 +122,52 @@ function MainPage() {
   // };
 
   // STOMP 연결 처리
-  useEffect(() => {
-    if (!userId) return;
+  // useEffect(() => {
+  //   if (!userId) return;
 
-    console.log("userid:", userId);
-    console.log("accessToken:",useraccesstoken);
+  //   console.log("userid:", userId);
+  //   console.log("accessToken:", useraccesstoken);
 
-    const socketUrl = `http://15.164.249.16:8080/ws-signaling?token=${encodeURIComponent(
-      useraccesstoken
-    )}`;
+  //   const socketUrl = `http://15.164.249.16:8080/ws-signaling?token=${encodeURIComponent(
+  //     useraccesstoken
+  //   )}`;
 
-    const client = new Client({
-      webSocketFactory: () => new SockJS(socketUrl),
-      reconnectDelay: 5000,
-      debug: (str) => {
-        console.log(str);
-      },
-      onConnect: (frame) => {
-        console.log("STOMP 연결됨:", frame);
-        setConnected(true);
+  //   const client = new Client({
+  //     webSocketFactory: () => new SockJS(socketUrl),
+  //     reconnectDelay: 5000,
+  //     debug: (str) => {
+  //       console.log(str);
+  //     },
+  //     onConnect: (frame) => {
+  //       console.log("STOMP 연결됨:", frame);
+  //       setConnected(true);
 
-        client.subscribe(`/user/queue/signal`, (msg) => {
-          const message = JSON.parse(msg.body);
-          console.log("수신 메시지:", message);
-          handleSignalMessage(message);
-        });
-      },
-      onStompError: (frame) => {
-        console.error("STOMP 에러:", frame.headers["message"]);
-      },
-      onWebSocketClose: (evt) => {
-        console.warn("WebSocket 연결 종료", evt);
-        setConnected(false);
-      },
-      onWebSocketError: (evt) => {
-        console.error("WebSocket 에러", evt);
-      },
-    });
+  //       client.subscribe(`/user/queue/signal`, (msg) => {
+  //         const message = JSON.parse(msg.body);
+  //         console.log("수신 메시지:", message);
+  //         handleSignalMessage(message);
+  //       });
+  //     },
+  //     onStompError: (frame) => {
+  //       console.error("STOMP 에러:", frame.headers["message"]);
+  //     },
+  //     onWebSocketClose: (evt) => {
+  //       console.warn("WebSocket 연결 종료", evt);
+  //       setConnected(false);
+  //     },
+  //     onWebSocketError: (evt) => {
+  //       console.error("WebSocket 에러", evt);
+  //     },
+  //   });
 
-    client.activate();
-    stompClient.current = client;
+  //   client.activate();
+  //   stompClient.current = client;
 
-    return () => {
-      client.deactivate();
-      setConnected(false);
-    };
-  }, [userId]);
+  //   return () => {
+  //     client.deactivate();
+  //     setConnected(false);
+  //   };
+  // }, [userId]);
 
   const handleSignalMessage = (message) => {
     const { type, from, data } = message;
@@ -187,6 +188,21 @@ function MainPage() {
         console.warn("알 수 없는 메시지 타입:", type);
     }
   };
+
+  // stompClient가 준비되면 signal 메시지 수신 구독 설정
+  useEffect(() => {
+    if (!stompClient || !connected) return;
+
+    const subscription = stompClient.subscribe(`/user/queue/signal`, (msg) => {
+      const message = JSON.parse(msg.body);
+      console.log("수신 메시지:", message);
+      handleSignalMessage(message);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [stompClient, connected]);
 
   return (
     <MainContainer>
