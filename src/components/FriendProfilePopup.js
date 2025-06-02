@@ -7,16 +7,27 @@ function FriendProfilePopup({ friend, onClose }) {
   const navigate = useNavigate();
 
   const handleCallClick = () => {
-
-    const receiverId = friend.userId
-    alert("상대방 ID: "+ receiverId+"\n상대방 email: " + friend.email + "\n전화 연결을 시도합니다.");
+    const receiverId = friend.userId;
+    alert(
+      "상대방 ID: " +
+        receiverId +
+        "\n상대방 email: " +
+        friend.email +
+        "\n전화 연결을 시도합니다."
+    );
     if (!receiverId) {
       alert("상대방 ID가 정의되지 않았습니다.");
 
       return;
     }
     localStorage.setItem("receiverId", receiverId);
-    navigate("/meeting");
+    navigate("/meeting", {
+      state: {
+        callerId: localStorage.getItem("usereamil"), // 로그인한 사용자 ID
+        receiverId: friend.email,
+        incoming: false, // 전화를 거는 쪽이므로 false
+      },
+    });
   };
 
   const handleDeleteClick = async () => {

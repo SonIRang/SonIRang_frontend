@@ -1,6 +1,6 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import styled from "styled-components";
 
 function FriendList({ friends, onFriendClick }) {
   const navigate = useNavigate();
@@ -10,14 +10,14 @@ function FriendList({ friends, onFriendClick }) {
       {friends.map((friend, index) => (
         <ListItem key={index} onClick={() => onFriendClick(friend)}>
           <ProfileImage
-            src={friend.profileImage || '/profile.png'}
+            src={friend.profileImage || "/profile.png"}
             alt={friend.name}
           />
           <InfoContainer>
             <FriendName>{friend.name}</FriendName>
             <LastCall>
-              최근 통화일:{' '}
-              {friend.callHistory?.[friend.callHistory.length - 1] || '없음'}
+              최근 통화일:{" "}
+              {friend.callHistory?.[friend.callHistory.length - 1] || "없음"}
             </LastCall>
           </InfoContainer>
           <CallIconWrapper>
@@ -25,16 +25,28 @@ function FriendList({ friends, onFriendClick }) {
               src="/callicon.png"
               onClick={(e) => {
                 e.stopPropagation(); // li 클릭 이벤트 막기
-                const receiverId = friend.userId
-                alert("상대방 ID: "+ receiverId+"\n상대방 email: " + friend.email + "\n전화 연결을 시도합니다.");
-                
+                const receiverId = friend.userId;
+                alert(
+                  "상대방 ID: " +
+                    receiverId +
+                    "\n상대방 email: " +
+                    friend.email +
+                    "\n전화 연결을 시도합니다."
+                );
+
                 if (!receiverId) {
                   alert("상대방 ID가 localStorage에 없습니다.");
                   return;
                 }
-                
+
                 localStorage.setItem("receiverId", receiverId);
-                navigate('/meeting');
+                navigate("/meeting", {
+                  state: {
+                    callerId: localStorage.getItem("usereamil"), // 로그인한 사용자 ID
+                    receiverId: friend.email,
+                    incoming: false, // 전화를 거는 쪽이므로 false
+                  },
+                });
               }}
               alt="call icon"
             />
