@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useStompClient } from "../context/StompContext";
 
-
 const VideoCallScreen = () => {
   const navigate = useNavigate();
 
@@ -44,23 +43,38 @@ const VideoCallScreen = () => {
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
 
+    // 👉 로컬 스트림이 있다면 트랙 추가
     const stream = localStreamRef.current;
     if (stream) {
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+        console.log("✅ 로컬 트랙 등록됨:", track.kind);
+      });
+    } else {
+      console.warn("⚠️ 로컬 스트림이 아직 준비되지 않았습니다.");
     }
 
+    // ICE 후보 수집
     pc.onicecandidate = (e) => {
       if (e.candidate) {
+        console.log("📨 ICE 후보 전송:", e.candidate);
         sendSignalToPeer("candidate", receiverId || callerId, e.candidate);
       }
     };
 
-    pc.ontrack = (e) => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = e.streams[0];
+    // 원격 트랙 수신 처리
+    pc.ontrack = (event) => {
+      console.log("📶 ontrack 이벤트 수신", event);
+      const [remoteStream] = event.streams;
+      if (remoteVideoRef.current && remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        console.log("🎥 원격 스트림 설정 완료");
+      } else {
+        console.warn("⚠️ 원격 스트림 없음");
       }
     };
 
+    // PeerConnection 및 상태 초기화
     setPeerConnection(pc);
     setRemoteDescriptionSet(false);
     iceCandidateQueue.current = [];
@@ -162,7 +176,13 @@ const VideoCallScreen = () => {
       const micStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
+      console.log("✅ getUserMedia (audio) 성공", micStream);
+
       const audioTrack = micStream.getAudioTracks()[0];
+      if (!audioTrack) {
+        console.warn("⚠️ 오디오 트랙이 없습니다.");
+        return;
+      }
 
       if (!localStreamRef.current) {
         localStreamRef.current = new MediaStream();
@@ -170,6 +190,7 @@ const VideoCallScreen = () => {
 
       const oldAudioTrack = localStreamRef.current.getAudioTracks()[0];
       if (oldAudioTrack) {
+        console.log("🔄 기존 오디오 트랙 제거");
         localStreamRef.current.removeTrack(oldAudioTrack);
         oldAudioTrack.stop();
       }
@@ -181,7 +202,13 @@ const VideoCallScreen = () => {
       console.log("🎤 마이크 시작됨");
     } catch (err) {
       console.error("❌ 마이크 시작 실패:", err);
-      alert("마이크 권한을 확인해주세요.");
+      if (err.name === "NotAllowedError") {
+        alert("마이크 권한이 차단되어 있습니다. 브라우저 설정을 확인해주세요.");
+      } else if (err.name === "NotFoundError") {
+        alert("마이크 장치를 찾을 수 없습니다.");
+      } else {
+        alert("마이크 권한을 확인해주세요.");
+      }
     }
   };
 
@@ -301,8 +328,7 @@ const VideoCallScreen = () => {
         <IconButton
           src="/endcall.png"
           alt="통화 종료"
-          onClick={
-            () => navigate("/")}
+          onClick={() => navigate("/")}
         />
         <button onClick={createOffer}>통화 시작</button>
       </ButtonSide>
