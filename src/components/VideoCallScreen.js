@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useStompClient } from "../context/StompContext";
 
+
 const VideoCallScreen = () => {
+  const navigate = useNavigate();
+
   const location = useLocation();
   const receiverId = location.state?.receiverId;
   const callerId = location.state?.callerId;
@@ -186,38 +189,43 @@ const VideoCallScreen = () => {
   useEffect(() => {
     if (!stompClient || !connected) return;
 
-    const subscription = stompClient.subscribe("/user/queue/signal", (message) => {
-      const data = JSON.parse(message.body);
-      switch (data.type) {
-        case "offer":
-          (async () => {
-            if (!peerConnection) {
-              createPeerConnection();
-            }
-            try {
-              await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
-              setRemoteDescriptionSet(true);
-              const answer = await peerConnection.createAnswer();
-              await peerConnection.setLocalDescription(answer);
-              sendSignalToPeer("answer", data.from, answer);
-            } catch (e) {
-              console.error("❌ Offer 처리 실패:", e);
-            }
-          })();
-          break;
-        case "answer":
-          handleAnswer(data.data);
-          break;
-        case "candidate":
-          handleCandidate(data.data);
-          break;
-        case "end":
-          closePeerConnection();
-          break;
-        default:
-          console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
+    const subscription = stompClient.subscribe(
+      "/user/queue/signal",
+      (message) => {
+        const data = JSON.parse(message.body);
+        switch (data.type) {
+          case "offer":
+            (async () => {
+              if (!peerConnection) {
+                createPeerConnection();
+              }
+              try {
+                await peerConnection.setRemoteDescription(
+                  new RTCSessionDescription(data.data)
+                );
+                setRemoteDescriptionSet(true);
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                sendSignalToPeer("answer", data.from, answer);
+              } catch (e) {
+                console.error("❌ Offer 처리 실패:", e);
+              }
+            })();
+            break;
+          case "answer":
+            handleAnswer(data.data);
+            break;
+          case "candidate":
+            handleCandidate(data.data);
+            break;
+          case "end":
+            closePeerConnection();
+            break;
+          default:
+            console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
+        }
       }
-    });
+    );
 
     return () => {
       if (subscription) subscription.unsubscribe();
@@ -248,70 +256,163 @@ const VideoCallScreen = () => {
   }, []);
 
   return (
-    <div>
-      <h2>1:1 WebRTC 화상통화</h2>
-      <p>
-        내 ID: <b>{currentUserId || "로그인 필요"}</b>
-      </p>
-      <p>
-        상대방 ID: <b>{receiverId || "없음"}</b>
-      </p>
+    <VideoContainer>
+      <VideoArea>
+        <LocalVideoWrapper>
+          <video ref={localVideoRef} autoPlay muted />
+          {!isCameraOn && (
+            <CenterProfileImage src="/profile.png" alt="프로필 이미지" />
+          )}
+        </LocalVideoWrapper>
+        <RemoteVideo ref={remoteVideoRef} autoPlay />
+      </VideoArea>
 
-      <div>
-        <video
-          ref={localVideoRef}
-          autoPlay
-          muted
-          style={{ width: "45%", border: "1px solid gray" }}
+      <ButtonSide>
+        <IconButton
+          src={isCameraOn ? "/camera-on.png" : "/camera-off.png"}
+          alt="카메라"
+          onClick={() => {
+            if (isCameraOn) {
+              const track = localStreamRef.current?.getVideoTracks()[0];
+              if (track) track.enabled = false;
+              setIsCameraOn(false);
+              console.log("📷 카메라 끔");
+            } else {
+              startCamera();
+            }
+          }}
         />
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          style={{ width: "45%", border: "1px solid gray" }}
+
+        <IconButton
+          src={isMicOn ? "/mic-on.png" : "/mic-off.png"}
+          alt="마이크"
+          onClick={() => {
+            if (isMicOn) {
+              const track = localStreamRef.current?.getAudioTracks()[0];
+              if (track) track.enabled = false;
+              setIsMicOn(false);
+              console.log("🎤 마이크 끔");
+            } else {
+              startMic();
+            }
+          }}
         />
-      </div>
 
-      <IconButton
-        src={isCameraOn ? "/camera-on.png" : "/camera-off.png"}
-        alt="카메라"
-        onClick={() => {
-          if (isCameraOn) {
-            const track = localStreamRef.current?.getVideoTracks()[0];
-            if (track) track.enabled = false;
-            setIsCameraOn(false);
-            console.log("📷 카메라 끔");
-          } else {
-            startCamera();
-          }
-        }}
-      />
-
-      <IconButton
-        src={isMicOn ? "/mic-on.png" : "/mic-off.png"}
-        alt="마이크"
-        onClick={() => {
-          if (isMicOn) {
-            const track = localStreamRef.current?.getAudioTracks()[0];
-            if (track) track.enabled = false;
-            setIsMicOn(false);
-            console.log("🎤 마이크 끔");
-          } else {
-            startMic();
-          }
-        }}
-      />
-
-      <button onClick={createOffer}>통화 시작</button>
-      <button onClick={endCall}>통화 종료</button>
-    </div>
+        <IconButton
+          src="/endcall.png"
+          alt="통화 종료"
+          onClick={() => navigate("/")}
+        />
+        <button onClick={createOffer}>통화 시작</button>
+      </ButtonSide>
+    </VideoContainer>
   );
 };
 
 export default VideoCallScreen;
 
-const IconButton = styled.img`
-  width: 32px;
-  height: 32px;
+const VideoContainer = styled.div`
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`;
+
+const VideoArea = styled.div`
+  margin: auto;
+  width: 90%;
+  max-height: 85vh;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+`;
+
+const RemoteVideo = styled.video`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: black;
+  border-radius: 20px;
+  z-index: 1;
+`;
+
+const LocalVideoWrapper = styled.div`
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 30%;
+  aspect-ratio: 16 / 9;
+  z-index: 2;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #bcbcbc;
+`;
+
+const LocalVideo = styled.video`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  background-color: ${(props) => (props.$isCameraReady ? "black" : "#bcbcbc")};
+`;
+
+const CenterProfileImage = styled.img`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 2;
+`;
+
+const Button = styled.button`
+  margin: 0.5rem;
+  padding: 0.6rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
-  margin: 0 10px;
+  font-weight: 600;
+
+  &:hover {
+    background-color: #0056b3;
+  }
+`;
+
+const InfoText = styled.p`
+  margin: 0.3rem 0;
+`;
+
+const Spacer = styled.div`
+  height: 1rem;
+`;
+
+const ButtonSide = styled.div`
+  width: 100%;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f2f2f7;
+  border-radius: 30px;
+  box-sizing: border-box;
+  padding: 1rem;
+`;
+
+const IconButton = styled.img`
+  height: 100%;
+  width: auto;
+  cursor: pointer;
+  margin: 0 0.5rem;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
 `;
