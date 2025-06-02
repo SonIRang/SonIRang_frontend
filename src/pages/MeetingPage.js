@@ -6,6 +6,7 @@ import VideoCallScreen from "../components/VideoCallScreen";
 
 export default function MeetingPaget() {
   const [chatOpen, setChatOpen] = useState(false);
+  const [callHistoryId, setCallHistoryId] = useState(null);
 
   const location = useLocation();
   const {
@@ -27,11 +28,16 @@ export default function MeetingPaget() {
           receiverId={receiverId}
           offer={offerFromCaller}
           incoming={incoming}
+          setCallHistoryId={setCallHistoryId}
         />
       </LeftPanel>
 
       <RightPanel>
-        <ChatWindow isOpen={chatOpen} toggleChat={toggleChat} />
+        <ChatWindow
+          isOpen={chatOpen}
+          toggleChat={toggleChat}
+          callHistoryId={callHistoryId}
+        />
       </RightPanel>
     </Container>
   );

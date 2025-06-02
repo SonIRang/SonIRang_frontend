@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import styled from "styled-components";
-import { Client } from "@stomp/stompjs";
+import { useStompClient } from "../context/StompContext";
 
 const VideoCallScreen = () => {
   const location = useLocation();
@@ -15,7 +15,9 @@ const VideoCallScreen = () => {
   const localStreamRef = useRef(null);
   const iceCandidateQueue = useRef([]);
 
-  const [stompClient, setStompClient] = useState(null);
+  // StompClient와 연결 상태를 Context에서 가져옴
+  const { stompClient, connected } = useStompClient();
+
   const [peerConnection, setPeerConnection] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [remoteDescriptionSet, setRemoteDescriptionSet] = useState(false);
@@ -24,7 +26,10 @@ const VideoCallScreen = () => {
   const [isMicOn, setIsMicOn] = useState(false);
 
   const sendSignalToPeer = (type, to, data = null) => {
-    if (!stompClient) return;
+    if (!stompClient || !stompClient.connected) {
+      console.warn("❗ STOMP 클라이언트가 연결되지 않음");
+      return;
+    }
     stompClient.publish({
       destination: "/app/signal",
       body: JSON.stringify({ type, to, from: currentUserId, data }),
@@ -73,53 +78,8 @@ const VideoCallScreen = () => {
     }
   };
 
-  const connectWebSocket = () => {
-    const accessToken = localStorage.getItem("generalAccessToken");
-    const user = localStorage.getItem("useremail");
-    if (!accessToken || !user) {
-      alert("JWT 또는 유저 정보가 없습니다.");
-      return;
-    }
-    setCurrentUserId(user);
-
-    const client = new Client({
-      brokerURL: `ws://localhost:8080/ws-signaling?token=${encodeURIComponent(
-        accessToken
-      )}`,
-      reconnectDelay: 5000,
-      onConnect: () => {
-        console.log("✅ WebSocket 연결됨");
-
-        client.subscribe("/user/queue/signal", async (message) => {
-          const data = JSON.parse(message.body);
-
-          switch (data.type) {
-            case "answer":
-              handleAnswer(data.data);
-              break;
-            case "candidate":
-              handleCandidate(data.data);
-              break;
-            case "end":
-              closePeerConnection();
-              break;
-            default:
-              console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
-          }
-        });
-
-        if (receiverId) {
-          createOffer();
-        }
-      },
-      onStompError: (frame) => {
-        console.error("❌ STOMP 에러:", frame);
-      },
-    });
-
-    client.activate();
-    setStompClient(client);
-  };
+  // 기존 connectWebSocket 함수는 제거 (WebSocket 연결은 StompProvider가 담당)
+  // 대신 연결 확인용 effect 추가
 
   const handleAnswer = async (answer) => {
     try {
@@ -222,25 +182,66 @@ const VideoCallScreen = () => {
     }
   };
 
+  // WebSocket 메시지 구독 설정은 여기서 stompClient가 변경될 때마다 등록
   useEffect(() => {
-    connectWebSocket();
-    startCamera();
-    startMic();
+    if (!stompClient || !connected) return;
 
-    // ✅ 내가 거는 쪽(caller)일 때 자동으로 offer 생성
-    if (!incoming && callerId && receiverId) {
-      const tryOffer = async () => {
-        // 카메라, 마이크가 다 준비되고 나서 약간의 시간 여유를 줌 (필요 시 제거 가능)
-        await new Promise((res) => setTimeout(res, 1000));
-        await createOffer(); // offer 생성 및 sendSignalToPeer 내부 호출
-      };
-      tryOffer();
-    }
+    const subscription = stompClient.subscribe("/user/queue/signal", (message) => {
+      const data = JSON.parse(message.body);
+      switch (data.type) {
+        case "offer":
+          (async () => {
+            if (!peerConnection) {
+              createPeerConnection();
+            }
+            try {
+              await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
+              setRemoteDescriptionSet(true);
+              const answer = await peerConnection.createAnswer();
+              await peerConnection.setLocalDescription(answer);
+              sendSignalToPeer("answer", data.from, answer);
+            } catch (e) {
+              console.error("❌ Offer 처리 실패:", e);
+            }
+          })();
+          break;
+        case "answer":
+          handleAnswer(data.data);
+          break;
+        case "candidate":
+          handleCandidate(data.data);
+          break;
+        case "end":
+          closePeerConnection();
+          break;
+        default:
+          console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
+      }
+    });
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
+  }, [stompClient, connected, peerConnection]);
+
+  useEffect(() => {
+    const initCall = async () => {
+      await startCamera();
+      await startMic();
+      const user = localStorage.getItem("useremail");
+      setCurrentUserId(user);
+
+      if (!incoming && callerId && receiverId) {
+        createOffer();
+      }
+    };
+
+    initCall();
 
     return () => {
       if (stompClient) {
         stompClient.deactivate();
-        console.log("🔌 MeetingPage WebSocket 연결 해제됨");
+        console.log("🔌 WebSocket 연결 해제됨");
       }
       closePeerConnection();
     };

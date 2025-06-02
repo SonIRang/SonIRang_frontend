@@ -3,16 +3,25 @@ import styled from "styled-components";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
-function ChatWindow({ isOpen, toggleChat }) {
-  const [callHistoryId, setCallHistoryId] = useState("");
+function ChatWindow({ isOpen, toggleChat, callHistoryId }) {
   const [message, setMessage] = useState("");
   const [chatLog, setChatLog] = useState([]);
   const stompClientRef = useRef(null);
 
+  // useEffect(() => {
+  //   if (callHistoryId) {
+  //     connectWebSocket();
+  //   }
+  //   // 클린업: 컴포넌트가 unmount될 때 WebSocket 종료
+  //   return () => {
+  //     disconnectWebSocket();
+  //   };
+  // }, [callHistoryId]);
+
   // WebSocket 연결 함수
   const connectWebSocket = () => {
-    const accessToken = localStorage.getItem("accessToken");
-    const senderEmail = localStorage.getItem("userEmail");
+    const accessToken = localStorage.getItem("generalAccessToken");
+    const senderEmail = localStorage.getItem("useremail");
 
     if (!accessToken || !callHistoryId || !senderEmail) {
       alert("accessToken과 callHistoryId, senderEmail이 모두 필요합니다.");
@@ -44,7 +53,7 @@ function ChatWindow({ isOpen, toggleChat }) {
 
   // 메시지 전송 함수
   const sendMessage = () => {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken = localStorage.getItem("generalAccessToken");
     const senderEmail = localStorage.getItem("userEmail");
 
     if (!stompClientRef.current || !stompClientRef.current.connected) {
