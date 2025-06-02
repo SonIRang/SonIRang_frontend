@@ -21,11 +21,16 @@ const VideoCallScreen = () => {
   const { stompClient, connected } = useStompClient();
 
   const [peerConnection, setPeerConnection] = useState(null);
+  const peerConnectionRef = useRef(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [remoteDescriptionSet, setRemoteDescriptionSet] = useState(false);
 
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
+
+  useEffect(() => {
+    peerConnectionRef.current = peerConnection;
+  }, [peerConnection]);
 
   const sendSignalToPeer = (type, to, data = null) => {
     if (!stompClient || !stompClient.connected) {
@@ -39,30 +44,54 @@ const VideoCallScreen = () => {
   };
 
   const createPeerConnection = () => {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
+    console.log("createPeerConnection 호출됨");
 
-    // 👉 로컬 스트림이 있다면 트랙 추가
-    const stream = localStreamRef.current;
-    if (stream) {
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-        console.log("✅ 로컬 트랙 등록됨:", track.kind);
-      });
-    } else {
-      console.warn("⚠️ 로컬 스트림이 아직 준비되지 않았습니다.");
+    // 기존 연결이 있으면 닫고 초기화
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
     }
 
-    // ICE 후보 수집
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ],
+    });
+
+    // ✅ ICE 연결 상태 변화 핸들러 추가
+    pc.oniceconnectionstatechange = () => {
+      console.log("📡 ICE 연결 상태 변화:", pc.iceConnectionState);
+
+      switch (pc.iceConnectionState) {
+        case "connected":
+          console.log("✅ 연결 완료 (connected)");
+          break;
+        case "disconnected":
+          console.warn("⚠️ 연결 끊김 (disconnected)");
+          break;
+        case "failed":
+          console.error("❌ ICE 연결 실패");
+          // 필요시 자동 재시도 또는 종료 로직 추가
+          break;
+        case "closed":
+          console.log("🔒 연결 종료됨 (closed)");
+          break;
+        default:
+          console.log("ℹ️ 현재 ICE 상태:", pc.iceConnectionState);
+      }
+    };
+
+    // ICE 후보 수집 핸들러
     pc.onicecandidate = (e) => {
+      console.log("🌐 ICE 상태:", pc.iceConnectionState);
       if (e.candidate) {
         console.log("📨 ICE 후보 전송:", e.candidate);
         sendSignalToPeer("candidate", receiverId || callerId, e.candidate);
       }
     };
 
-    // 원격 트랙 수신 처리
+    // 원격 트랙 수신
     pc.ontrack = (event) => {
       console.log("📶 ontrack 이벤트 수신", event);
       const [remoteStream] = event.streams;
@@ -74,8 +103,21 @@ const VideoCallScreen = () => {
       }
     };
 
-    // PeerConnection 및 상태 초기화
+   // 로컬 스트림 추가
+  const stream = localStreamRef.current;
+  if (stream) {
+    stream.getTracks().forEach((track) => {
+      pc.addTrack(track, stream);
+      console.log("✅ 로컬 트랙 등록됨:", track.kind);
+    });
+  } else {
+    console.warn("⚠️ 로컬 스트림이 아직 준비되지 않았습니다.");
+  }
+
+    // 상태와 ref에 저장
     setPeerConnection(pc);
+    peerConnectionRef.current = pc;
+
     setRemoteDescriptionSet(false);
     iceCandidateQueue.current = [];
 
@@ -83,7 +125,13 @@ const VideoCallScreen = () => {
   };
 
   const createOffer = async () => {
-    const pc = peerConnection || createPeerConnection();
+    let pc = peerConnection;
+
+    if (!pc) {
+      pc = createPeerConnection(); // ✅ 리턴값을 반드시 사용
+      setPeerConnection(pc);
+    }
+
     if (!pc) return;
 
     try {
@@ -144,6 +192,7 @@ const VideoCallScreen = () => {
       const cameraStream = await navigator.mediaDevices.getUserMedia({
         video: true,
       });
+      console.log("✅ getUserMedia (video) 성공", cameraStream);
       const videoTrack = cameraStream.getVideoTracks()[0];
 
       if (!localStreamRef.current) {
@@ -223,11 +272,13 @@ const VideoCallScreen = () => {
         switch (data.type) {
           case "offer":
             (async () => {
-              if (!peerConnection) {
-                createPeerConnection();
+              let pc = peerConnection;
+              if (!pc) {
+                pc = createPeerConnection(); // 👉 반환값을 반드시 받아야 함
+                setPeerConnection(pc);
               }
               try {
-                await peerConnection.setRemoteDescription(
+                await pc.setRemoteDescription(
                   new RTCSessionDescription(data.data)
                 );
                 setRemoteDescriptionSet(true);
@@ -272,26 +323,18 @@ const VideoCallScreen = () => {
     };
 
     initCall();
-
-    return () => {
-      if (stompClient) {
-        stompClient.deactivate();
-        console.log("🔌 WebSocket 연결 해제됨");
-      }
-      closePeerConnection();
-    };
   }, []);
 
   return (
     <VideoContainer>
       <VideoArea>
+        <RemoteVideo ref={remoteVideoRef} autoPlay />
         <LocalVideoWrapper>
-          <video ref={localVideoRef} autoPlay muted />
+          <LocalVideo ref={localVideoRef} autoPlay muted />
           {!isCameraOn && (
             <CenterProfileImage src="/profile.png" alt="프로필 이미지" />
           )}
         </LocalVideoWrapper>
-        <RemoteVideo ref={remoteVideoRef} autoPlay />
       </VideoArea>
 
       <ButtonSide>
@@ -382,15 +425,16 @@ const LocalVideo = styled.video`
   height: 100%;
   object-fit: cover;
   border-radius: 16px;
-  background-color: ${(props) => (props.$isCameraReady ? "black" : "#bcbcbc")};
+  z-index: 1;
+  background-color: #bcbcbc;
 `;
 
 const CenterProfileImage = styled.img`
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 100px;
-  height: 100px;
+  width: 30%;
+  height: auto;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   object-fit: cover;
