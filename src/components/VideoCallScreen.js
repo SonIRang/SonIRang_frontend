@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useStompClient } from "../context/StompContext";
 
+
 const VideoCallScreen = () => {
   const navigate = useNavigate();
 
@@ -122,7 +123,6 @@ const VideoCallScreen = () => {
   const endCall = () => {
     sendSignalToPeer("end", receiverId || callerId);
     closePeerConnection();
-    navigate("/");
   };
 
   const startCamera = async () => {
@@ -298,7 +298,12 @@ const VideoCallScreen = () => {
           }}
         />
 
-        <IconButton src="/endcall.png" alt="통화 종료" onClick={endCall} />
+        <IconButton
+          src="/endcall.png"
+          alt="통화 종료"
+          onClick={
+            () => navigate("/")}
+        />
         <button onClick={createOffer}>통화 시작</button>
       </ButtonSide>
     </VideoContainer>
