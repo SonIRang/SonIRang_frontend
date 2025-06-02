@@ -27,7 +27,8 @@ const VideoCallScreen = () => {
 
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
-
+  const [callAccepted, setCallAccepted] = useState(false);
+  
   useEffect(() => {
     peerConnectionRef.current = peerConnection;
   }, [peerConnection]);
@@ -103,16 +104,16 @@ const VideoCallScreen = () => {
       }
     };
 
-   // 로컬 스트림 추가
-  const stream = localStreamRef.current;
-  if (stream) {
-    stream.getTracks().forEach((track) => {
-      pc.addTrack(track, stream);
-      console.log("✅ 로컬 트랙 등록됨:", track.kind);
-    });
-  } else {
-    console.warn("⚠️ 로컬 스트림이 아직 준비되지 않았습니다.");
-  }
+    // 로컬 스트림 추가
+    const stream = localStreamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+        console.log("✅ 로컬 트랙 등록됨:", track.kind);
+      });
+    } else {
+      console.warn("⚠️ 로컬 스트림이 아직 준비되지 않았습니다.");
+    }
 
     // 상태와 ref에 저장
     setPeerConnection(pc);
@@ -152,6 +153,7 @@ const VideoCallScreen = () => {
         new RTCSessionDescription(answer)
       );
       setRemoteDescriptionSet(true);
+      setCallAccepted(true);
       for (const c of iceCandidateQueue.current) {
         await peerConnection.addIceCandidate(new RTCIceCandidate(c));
       }
@@ -327,6 +329,10 @@ const VideoCallScreen = () => {
 
   return (
     <VideoContainer>
+      {callAccepted && (
+        <AcceptedMessage>상대방이 전화를 받았습니다</AcceptedMessage>
+      )}
+
       <VideoArea>
         <RemoteVideo ref={remoteVideoRef} autoPlay />
         <LocalVideoWrapper>
@@ -486,4 +492,16 @@ const IconButton = styled.img`
   &:hover {
     opacity: 0.8;
   }
+`;
+const AcceptedMessage = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 128, 0, 0.8);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: bold;
+  z-index: 999;
 `;
