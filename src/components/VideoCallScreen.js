@@ -27,6 +27,8 @@ const VideoCallScreen = () => {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
 
+  const [callAccepted, setCallAccepted] = useState(false);
+
   const sendSignalToPeer = (type, to, data = null) => {
     if (!stompClient || !stompClient.connected) {
       console.warn("❗ STOMP 클라이언트가 연결되지 않음");
@@ -104,6 +106,7 @@ const VideoCallScreen = () => {
         new RTCSessionDescription(answer)
       );
       setRemoteDescriptionSet(true);
+      setCallAccepted(true);
       for (const c of iceCandidateQueue.current) {
         await peerConnection.addIceCandidate(new RTCIceCandidate(c));
       }
@@ -284,6 +287,10 @@ const VideoCallScreen = () => {
 
   return (
     <VideoContainer>
+      {callAccepted && (
+        <AcceptedMessage>상대방이 전화를 받았습니다</AcceptedMessage>
+        )}
+
       <VideoArea>
         <LocalVideoWrapper>
           <video ref={localVideoRef} autoPlay muted />
@@ -442,4 +449,16 @@ const IconButton = styled.img`
   &:hover {
     opacity: 0.8;
   }
+`;
+const AcceptedMessage = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 128, 0, 0.8);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: bold;
+  z-index: 999;
 `;
