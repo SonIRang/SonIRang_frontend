@@ -1,34 +1,85 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import styled from "styled-components";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
 
 function ChatWindow({ isOpen, toggleChat }) {
-  const [text, setText] = useState("");
-  const [chat, setChat] = useState([
-    { text: "안녕하세요!", isMe: false },
-    { text: "반갑습니다.", isMe: true },
-  ]);
+  const [callHistoryId, setCallHistoryId] = useState("");
+  const [message, setMessage] = useState("");
+  const [chatLog, setChatLog] = useState([]);
+  const stompClientRef = useRef(null);
 
-  // const [chat, setChat] = useState([]); //백엔드 연동시
+  // WebSocket 연결 함수
+  const connectWebSocket = () => {
+    const accessToken = localStorage.getItem("accessToken");
+    const senderEmail = localStorage.getItem("userEmail");
 
-  const handleChatInput = (e) => setText(e.target.value);
+    if (!accessToken || !callHistoryId || !senderEmail) {
+      alert("accessToken과 callHistoryId, senderEmail이 모두 필요합니다.");
+      return;
+    }
 
-  const handleSubmitBtn = () => {
-    if (text.trim() !== "") {
-      setChat([...chat, { text, isMe: true }]);
-      setText("");
+    const socket = new SockJS("http://localhost:8080/ws/chat");
+    const stompClient = new Client({
+      webSocketFactory: () => socket,
+      connectHeaders: { Authorization: `Bearer ${accessToken}` },
+      onConnect: () => {
+        console.log("✅ WebSocket 연결됨");
+        stompClient.subscribe(`/sub/chat/room/${callHistoryId}`, (message) => {
+          const msg = JSON.parse(message.body);
+          const sender = msg.senderEmail || "알 수 없음";
+          const content = msg.messageContent || "(내용 없음)";
+          appendMessage(`[${sender}] ${content}`);
+        });
+        alert(`채팅방 ${callHistoryId}에 연결되었습니다.`);
+      },
+      onStompError: (error) => {
+        console.error("❌ WebSocket 연결 실패", error);
+        alert("WebSocket 연결 실패");
+      },
+    });
+    stompClient.activate();
+    stompClientRef.current = stompClient;
+  };
+
+  // 메시지 전송 함수
+  const sendMessage = () => {
+    const accessToken = localStorage.getItem("accessToken");
+    const senderEmail = localStorage.getItem("userEmail");
+
+    if (!stompClientRef.current || !stompClientRef.current.connected) {
+      alert("WebSocket 연결을 먼저 하세요.");
+      return;
+    }
+
+    const chatMessage = {
+      callHistoryId: Number(callHistoryId),
+      senderEmail: senderEmail,
+      receiverEmail: null, // 필요시 서버에서 처리
+      messageType: "TEXT",
+      messageContent: message,
+      createdAt: new Date().toISOString(),
+    };
+
+    stompClientRef.current.publish({
+      destination: "/pub/chat/send",
+      body: JSON.stringify(chatMessage),
+    });
+    setMessage("");
+  };
+
+  // WebSocket 연결 종료 함수
+  const disconnectWebSocket = () => {
+    if (stompClientRef.current) {
+      stompClientRef.current.deactivate();
+      alert("WebSocket 연결 종료");
     }
   };
 
-  //백 연결 후
-  //   const handleSubmitBtn = () => {
-  //   if (text.trim() !== "") {
-  //     const now = new Date();
-  //     const timestamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  //     setChat([...chat, { sender: "me", text, timestamp }]);
-  //     setText("");
-  //   }
-  // };
+  // 채팅 메시지를 화면에 추가
+  const appendMessage = (msg) => {
+    setChatLog((prevLog) => [...prevLog, msg]);
+  };
 
   return (
     <div>
@@ -46,34 +97,25 @@ function ChatWindow({ isOpen, toggleChat }) {
         </ChatHeader>
 
         <ChatBox>
-          {chat.map((msg, idx) => (
-            <ChatRow key={idx} isMe={idx % 2 === 0}>
-              <ChatBubble isMe={idx % 2 === 0}>{msg.text}</ChatBubble>
-            </ChatRow>
-          ))}
-
-          {/* 백 연동 후
-          {chat.map((msg, idx) => (
-            <ChatRow key={idx} isMe={msg.sender === "me"}>
-              <div>
-                <ChatBubble isMe={msg.sender === "me"}>{msg.text}</ChatBubble>
-                <TimeStamp isMe={msg.sender === "me"}>
-                  {msg.timestamp}
-                </TimeStamp>
-              </div>
-            </ChatRow>
-          ))} */}
+          {chatLog.map((msg, idx) => {
+            const isMe = msg.includes(localStorage.getItem("userEmail"));
+            return (
+              <ChatRow key={idx} isMe={isMe}>
+                <ChatBubble isMe={isMe}>{msg}</ChatBubble>
+              </ChatRow>
+            );
+          })}
         </ChatBox>
 
         <ChatInput>
           <textarea
             type="text"
-            value={text}
-            onChange={handleChatInput}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
             maxLength={120}
             placeholder="메세지를 입력하세요."
           />
-          <button onClick={handleSubmitBtn}>
+          <button onClick={sendMessage}>
             <img src="./chat-send.png" alt="Send" width="100" height="40" />
           </button>
         </ChatInput>

@@ -111,14 +111,6 @@ const LoginPage = () => {
       // 로그인 성공 후 메인 페이지 이동
       navigate("/");
 
-      console.log(
-        "저장된 auth accessToken:",
-        localStorage.getItem("authAccessToken")
-      );
-      console.log(
-        "저장된 auth refreshToken:",
-        localStorage.getItem("authRefreshToken")
-      );
     } catch (error) {
       console.error("❌ 로그인 실패:", error.message);
       alert(error.message);

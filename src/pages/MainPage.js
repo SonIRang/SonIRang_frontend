@@ -25,7 +25,7 @@ function MainPage() {
   const useremail = localStorage.getItem("useremail");
   const userbio = localStorage.getItem("userbio");
   const userprofile = localStorage.getItem("userprofile");
-  const useraccesstoken = localStorage.getItem("accessToken");
+  const useraccesstoken = localStorage.getItem("generalAccessToken");
 
   const [incomingCallData, setIncomingCallData] = useState(null); // { from: callerId, data: offer }
   const [showModal, setShowModal] = useState(false);
@@ -152,9 +152,10 @@ function MainPage() {
     if (!userId) return;
 
     console.log("userid:", userId);
+    console.log("accessToken:",useraccesstoken);
 
-    const socketUrl = `http://localhost:8080/ws-signaling?user-id=${encodeURIComponent(
-      userId
+    const socketUrl = `http://15.164.249.16:8080/ws-signaling?token=${encodeURIComponent(
+      useraccesstoken
     )}`;
 
     const client = new Client({
