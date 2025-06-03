@@ -306,7 +306,7 @@ const startCamera = async () => {
       } catch (e) {
         console.error("detectForVideo error:", e);
       }
-    }, 300);
+    }, 22);
 
     // 필요 시 clearInterval(intervalId) 처리
 
