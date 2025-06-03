@@ -136,6 +136,8 @@ function MainPage() {
       },
     });
     setIncomingCallData(null);
+    localStorage.setItem("receiverEmail", incomingCallData.from);
+    localStorage.setItem("callerEmail", useremail);
   };
 
   const rejectCall = () => {
