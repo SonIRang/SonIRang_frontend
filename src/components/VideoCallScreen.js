@@ -2,6 +2,11 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useStompClient } from "../context/StompContext";
+import {
+  FilesetResolver,
+  FaceLandmarker,
+  HandLandmarker,
+} from "@mediapipe/tasks-vision";
 
 const VideoCallScreen = () => {
   const navigate = useNavigate();
@@ -33,6 +38,38 @@ const VideoCallScreen = () => {
   const [selectedCameraId, setSelectedCameraId] = useState(null);
   const [selectedMicId, setSelectedMicId] = useState(null);
 
+  const faceLandmarkerRef = useRef(null);
+  const handLandmarkerRef = useRef(null);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+
+useEffect(() => {
+  (async () => {
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
+    );
+
+faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
+  baseOptions: {
+    modelAssetPath:
+      "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+  },
+  runningMode: "VIDEO",
+  numFaces: 1,
+});
+
+handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
+  baseOptions: {
+    modelAssetPath:
+      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+  },
+  runningMode: "VIDEO",
+  numHands: 2,
+});
+
+    setModelsLoaded(true);
+    console.log("✅ MediaPipe 모델 로드 완료");
+  })();
+}, []);
   
   useEffect(() => {
     const getDevices = async () => {
@@ -55,9 +92,22 @@ const VideoCallScreen = () => {
     }
   }, [selectedMicId]);
   
-    useEffect(() => {
-      peerConnectionRef.current = peerConnection;
-    }, [peerConnection]);
+  useEffect(() => {
+    peerConnectionRef.current = peerConnection;
+  }, [peerConnection]);
+
+const sendDataToServer = async (data) => {
+  try {
+    await fetch('/api/landmark', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    console.log("✅ 서버로 데이터 전송 성공");
+  } catch (error) {
+    console.error("❌ 서버 전송 실패:", error);
+  }
+};
   
   const sendSignalToPeer = (type, to, data = null) => {
     if (!stompClient || !stompClient.connected) {
@@ -192,44 +242,80 @@ const handleCandidate = useCallback((candidate) => {
     closePeerConnection();
   };
 
-  const startCamera = async () => {
-    try {
-      const cameraStream = await navigator.mediaDevices.getUserMedia({
-        video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
-      });
+const startCamera = async () => {
+  if (!modelsLoaded) {
+    console.warn("모델이 아직 로드되지 않았습니다.");
+    return;
+  }
+  try {
+    const cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
+    });
+    console.log("✅ getUserMedia (video) 성공", cameraStream);
 
-      if (peerConnectionRef.current && videoTrack) {
-        peerConnectionRef.current.addTrack(videoTrack, localStreamRef.current);
-      }
-
-      console.log("✅ getUserMedia (video) 성공", cameraStream);
-      console.log("로컬 스트림:", localStreamRef.current);
-      const videoTrack = cameraStream.getVideoTracks()[0];
-
-      if (!localStreamRef.current) {
-        localStreamRef.current = new MediaStream();
-      }
-
-      const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (oldVideoTrack) {
-        localStreamRef.current.removeTrack(oldVideoTrack);
-        oldVideoTrack.stop();
-      }
-
-      videoTrack.enabled = true;
-      localStreamRef.current.addTrack(videoTrack);
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = localStreamRef.current;
-      }
-
-      setIsCameraOn(true);
-      console.log("📷 카메라 시작됨");
-    } catch (err) {
-      console.error("❌ 카메라 시작 실패:", err);
-      alert("카메라 권한을 확인해주세요.");
+    const videoTrack = cameraStream.getVideoTracks()[0];
+    if (!localStreamRef.current) {
+      localStreamRef.current = new MediaStream();
     }
-  };
+    const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+    if (oldVideoTrack) {
+      localStreamRef.current.removeTrack(oldVideoTrack);
+      oldVideoTrack.stop();
+    }
+
+    localStreamRef.current.addTrack(videoTrack);
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+    console.log("로컬 스트림:", localStreamRef.current);
+    setIsCameraOn(true);
+
+    const videoElement = localVideoRef.current;
+    console.log("videoElement:", videoElement);
+    console.log("videoElement.readyState:", videoElement?.readyState);
+
+    const intervalId = setInterval(async () => {
+      console.log("tick");
+      if (!videoElement || videoElement.readyState < 2) {
+        console.log("video not ready");
+        return;
+      }
+      if (!faceLandmarkerRef.current || !handLandmarkerRef.current) {
+        console.log("model not loaded yet");
+        return;
+      }
+
+      try {
+        const nowInMs = performance.now();
+        const faceResult = await faceLandmarkerRef.current.detectForVideo(videoElement, nowInMs);
+        const handResult = await handLandmarkerRef.current.detectForVideo(videoElement, nowInMs);
+
+        let faceCoords = [];
+        if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
+          faceCoords = faceResult.faceLandmarks[0].map((p) => [p.x, p.y, p.z]).flat();
+        }
+        let handCoords = [];
+        if (handResult.landmarks && handResult.landmarks.length > 0) {
+          handResult.landmarks.forEach((landmarkArray) => {
+            handCoords = handCoords.concat(landmarkArray.map((p) => [p.x, p.y, p.z]).flat());
+          });
+        }
+
+        // console.log({ face: faceCoords, hand: handCoords });
+        sendDataToServer({ face: faceCoords, hand: handCoords });
+      } catch (e) {
+        console.error("detectForVideo error:", e);
+      }
+    }, 22);
+
+    // 필요 시 clearInterval(intervalId) 처리
+
+  } catch (err) {
+    console.error("❌ 카메라 시작 실패:", err);
+    alert("카메라 권한을 확인해주세요.");
+  }
+};
+
 
   const startMic = async () => {
     try {
