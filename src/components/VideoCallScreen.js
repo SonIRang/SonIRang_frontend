@@ -1,14 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useStompClient } from "../context/StompContext";
 
 const VideoCallScreen = () => {
   const navigate = useNavigate();
+
   const location = useLocation();
   const receiverId = location.state?.receiverId;
   const callerId = location.state?.callerId;
-  const offer = location.state?.offer;
   const incoming = location.state?.incoming;
 
   const localVideoRef = useRef(null);
@@ -16,6 +16,7 @@ const VideoCallScreen = () => {
   const localStreamRef = useRef(null);
   const iceCandidateQueue = useRef([]);
 
+  // StompClient와 연결 상태를 Context에서 가져옴
   const { stompClient, connected } = useStompClient();
 
   const [peerConnection, setPeerConnection] = useState(null);
@@ -26,107 +27,114 @@ const VideoCallScreen = () => {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
   const [callAccepted, setCallAccepted] = useState(false);
-  
-  const [videoDevices, setVideoDevices] = useState([]);
-  const [audioDevices, setAudioDevices] = useState([]);
-  const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState("");
-  const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState("");
+
+  const [cameraDevices, setCameraDevices] = useState([]);
+  const [micDevices, setMicDevices] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState(null);
+  const [selectedMicId, setSelectedMicId] = useState(null);
+
   
   useEffect(() => {
-    peerConnectionRef.current = peerConnection;
-  }, [peerConnection]);
-
-  const getDevices = async () => {
-    try {
+    const getDevices = async () => {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const video = devices.filter((d) => d.kind === "videoinput");
-      const audio = devices.filter((d) => d.kind === "audioinput");
-      setVideoDevices(video);
-      setAudioDevices(audio);
-      if (video[0]) setSelectedVideoDeviceId(video[0].deviceId);
-      if (audio[0]) setSelectedAudioDeviceId(audio[0].deviceId);
-    } catch (err) {
-      console.error("장치 가져오기 실패:", err);
-    }
-  };
+      setCameraDevices(devices.filter((d) => d.kind === "videoinput"));
+      setMicDevices(devices.filter((d) => d.kind === "audioinput"));
+    };
+    getDevices();
+  }, []);
 
+  useEffect(() => {
+    if (selectedCameraId !== null) {
+      startCamera();
+    }
+  }, [selectedCameraId]);
+
+  useEffect(() => {
+    if (selectedMicId !== null) {
+      startMic();
+    }
+  }, [selectedMicId]);
+  
+    useEffect(() => {
+      peerConnectionRef.current = peerConnection;
+    }, [peerConnection]);
+  
   const sendSignalToPeer = (type, to, data = null) => {
-    if (!stompClient || !stompClient.connected) return;
+    if (!stompClient || !stompClient.connected) {
+      console.warn("❗ STOMP 클라이언트가 연결되지 않음");
+      return;
+    }
     stompClient.publish({
       destination: "/app/signal",
       body: JSON.stringify({ type, to, from: currentUserId, data }),
     });
   };
 
-  const createPeerConnection = () => {
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
+const createPeerConnection = () => {
+  console.log("📞 createPeerConnection 호출됨");
+
+  if (peerConnectionRef.current) {
+    peerConnectionRef.current.close();
+    peerConnectionRef.current = null;
+  }
+
+  const pc = new RTCPeerConnection({
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+    ],
+  });
+
+  // 1. ICE 후보가 생기면 상대방에게 전송
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log("📤 ICE 후보 전송:", event.candidate);
+      sendSignalToPeer("candidate", receiverId || callerId, event.candidate);
     }
-
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-      ],
-    });
-
-        // ✅ ICE 연결 상태 변화 핸들러 추가
-    pc.oniceconnectionstatechange = () => {
-      console.log("📡 ICE 연결 상태 변화:", pc.iceConnectionState);
-
-      switch (pc.iceConnectionState) {
-        case "connected":
-          console.log("✅ 연결 완료 (connected)");
-          break;
-        case "disconnected":
-          console.warn("⚠️ 연결 끊김 (disconnected)");
-          break;
-        case "failed":
-          console.error("❌ ICE 연결 실패");
-          // 필요시 자동 재시도 또는 종료 로직 추가
-          break;
-        case "closed":
-          console.log("🔒 연결 종료됨 (closed)");
-          break;
-        default:
-          console.log("ℹ️ 현재 ICE 상태:", pc.iceConnectionState);
-      }
-    };
-
-    // ICE 후보 수집 핸들러
-    pc.onicecandidate = (e) => {
-      console.log("🌐 ICE 상태:", pc.iceConnectionState);
-      if (e.candidate) {
-        console.log("📨 ICE 후보 전송:", e.candidate);
-        sendSignalToPeer("candidate", receiverId || callerId, e.candidate);
-      }
-    };
-
-    pc.ontrack = (event) => {
-      const [remoteStream] = event.streams;
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
-      }
-    };
-
-    const stream = localStreamRef.current;
-    if (stream) {
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
-    }
-
-    setPeerConnection(pc);
-    peerConnectionRef.current = pc;
-    setRemoteDescriptionSet(false);
-    iceCandidateQueue.current = [];
-    return pc;
   };
+
+  // 2. 원격 스트림 수신 시 처리
+  pc.ontrack = (event) => {
+    console.log("🎥 원격 스트림 수신");
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = event.streams[0];
+    }
+  };
+
+  // 3. 연결 상태 모니터링
+  pc.onconnectionstatechange = () => {
+    console.log("🔄 연결 상태:", pc.connectionState);
+    if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+      console.warn("⚠️ 연결 끊김 - 연결 종료 처리");
+      closePeerConnection();
+    }
+  };
+
+  // 4. 로컬 스트림이 있다면 트랙 추가
+  if (localStreamRef.current) {
+    localStreamRef.current.getTracks().forEach((track) => {
+      pc.addTrack(track, localStreamRef.current);
+    });
+  }
+
+  // 상태 업데이트
+  setPeerConnection(pc);
+  peerConnectionRef.current = pc;
+  setRemoteDescriptionSet(false);
+  iceCandidateQueue.current = [];
+
+  return pc;
+};
+
 
   const createOffer = async () => {
     let pc = peerConnection;
-    if (!pc) pc = createPeerConnection();
+
+    if (!pc) {
+      pc = createPeerConnection(); // ✅ 리턴값을 반드시 사용
+      setPeerConnection(pc);
+    }
+
     if (!pc) return;
 
     try {
@@ -134,7 +142,7 @@ const VideoCallScreen = () => {
       await pc.setLocalDescription(offer);
       sendSignalToPeer("offer", receiverId, offer);
     } catch (err) {
-      console.error("Offer 생성 실패:", err);
+      console.error("❌ Offer 생성 실패:", err);
     }
   };
 
@@ -149,21 +157,25 @@ const VideoCallScreen = () => {
         await peerConnection.addIceCandidate(new RTCIceCandidate(c));
       }
       iceCandidateQueue.current = [];
+      console.log("✅ Answer 처리 성공:");
     } catch (err) {
-      console.error("Answer 처리 실패:", err);
+      console.error("❌ Answer 처리 실패:", err);
     }
   };
 
-  const handleCandidate = (candidate) => {
-    if (!candidate) return;
-    if (remoteDescriptionSet && peerConnection) {
-      peerConnection
-        .addIceCandidate(new RTCIceCandidate(candidate))
-        .catch(console.error);
-    } else {
-      iceCandidateQueue.current.push(candidate);
-    }
-  };
+const handleCandidate = useCallback((candidate) => {
+  if (!candidate) return;
+  if (remoteDescriptionSet && peerConnection) {
+    peerConnection
+      .addIceCandidate(new RTCIceCandidate(candidate))
+      .then(() => console.log("✅ ICE 후보 추가 성공"))
+      .catch((err) => console.error("❌ ICE 후보 추가 실패:", err));
+  } else {
+    console.log("📥 ICE 후보 대기열에 저장");
+    iceCandidateQueue.current.push(candidate);
+  }
+}, [peerConnection, remoteDescriptionSet]);
+
 
   const closePeerConnection = () => {
     if (peerConnection) {
@@ -172,190 +184,236 @@ const VideoCallScreen = () => {
     }
     setRemoteDescriptionSet(false);
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    console.log("🔚 PeerConnection 종료");
   };
 
   const endCall = () => {
     sendSignalToPeer("end", receiverId || callerId);
     closePeerConnection();
-    navigate("/");
   };
 
-  const startCamera = async (deviceId = selectedVideoDeviceId) => {
+  const startCamera = async () => {
     try {
-      const constraints = {
-        video: { deviceId: deviceId ? { exact: deviceId } : undefined },
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      const videoTrack = stream.getVideoTracks()[0];
+      const cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
+      });
 
-      if (!localStreamRef.current) localStreamRef.current = new MediaStream();
-
-      const oldTrack = localStreamRef.current.getVideoTracks()[0];
-      if (oldTrack) {
-        localStreamRef.current.removeTrack(oldTrack);
-        oldTrack.stop();
+      if (peerConnectionRef.current && videoTrack) {
+        peerConnectionRef.current.addTrack(videoTrack, localStreamRef.current);
       }
 
+      console.log("✅ getUserMedia (video) 성공", cameraStream);
+      console.log("로컬 스트림:", localStreamRef.current);
+      const videoTrack = cameraStream.getVideoTracks()[0];
+
+      if (!localStreamRef.current) {
+        localStreamRef.current = new MediaStream();
+      }
+
+      const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (oldVideoTrack) {
+        localStreamRef.current.removeTrack(oldVideoTrack);
+        oldVideoTrack.stop();
+      }
+
+      videoTrack.enabled = true;
       localStreamRef.current.addTrack(videoTrack);
+
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStreamRef.current;
       }
 
       setIsCameraOn(true);
+      console.log("📷 카메라 시작됨");
     } catch (err) {
-      alert("카메라 권한 또는 장치 설정을 확인해주세요.");
-      console.error(err);
+      console.error("❌ 카메라 시작 실패:", err);
+      alert("카메라 권한을 확인해주세요.");
     }
   };
 
-  const startMic = async (deviceId = selectedAudioDeviceId) => {
+  const startMic = async () => {
     try {
-      const constraints = {
-        audio: { deviceId: deviceId ? { exact: deviceId } : undefined },
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      const audioTrack = stream.getAudioTracks()[0];
+      const micStream = await navigator.mediaDevices.getUserMedia({
+        audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+      });
 
-      if (!localStreamRef.current) localStreamRef.current = new MediaStream();
+      console.log("✅ getUserMedia (audio) 성공", micStream);
 
-      const oldTrack = localStreamRef.current.getAudioTracks()[0];
-      if (oldTrack) {
-        localStreamRef.current.removeTrack(oldTrack);
-        oldTrack.stop();
+      const audioTrack = micStream.getAudioTracks()[0];
+      if (!audioTrack) {
+        console.warn("⚠️ 오디오 트랙이 없습니다.");
+        return;
       }
 
+      if (!localStreamRef.current) {
+        localStreamRef.current = new MediaStream();
+      }
+
+      const oldAudioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (oldAudioTrack) {
+        console.log("🔄 기존 오디오 트랙 제거");
+        localStreamRef.current.removeTrack(oldAudioTrack);
+        oldAudioTrack.stop();
+      }
+
+      audioTrack.enabled = true;
       localStreamRef.current.addTrack(audioTrack);
+
       setIsMicOn(true);
+      console.log("🎤 마이크 시작됨");
     } catch (err) {
-      alert("마이크 권한 또는 장치 설정을 확인해주세요.");
-      console.error(err);
+      console.error("❌ 마이크 시작 실패:", err);
+      if (err.name === "NotAllowedError") {
+        alert("마이크 권한이 차단되어 있습니다. 브라우저 설정을 확인해주세요.");
+      } else if (err.name === "NotFoundError") {
+        alert("마이크 장치를 찾을 수 없습니다.");
+      } else {
+        alert("마이크 권한을 확인해주세요.");
+      }
     }
   };
 
+  // WebSocket 메시지 구독 설정은 여기서 stompClient가 변경될 때마다 등록
   useEffect(() => {
     if (!stompClient || !connected) return;
 
     const subscription = stompClient.subscribe("/user/queue/signal", (message) => {
-      const data = JSON.parse(message.body);
-      switch (data.type) {
-        case "offer":
-          (async () => {
-            let pc = peerConnection;
-            if (!pc) pc = createPeerConnection();
-            try {
-              await pc.setRemoteDescription(new RTCSessionDescription(data.data));
-              setRemoteDescriptionSet(true);
-              const answer = await pc.createAnswer();
-              await pc.setLocalDescription(answer);
-              sendSignalToPeer("answer", data.from, answer);
-            } catch (e) {
-              console.error("Offer 처리 실패:", e);
-            }
-          })();
-          break;
-        case "answer":
-          handleAnswer(data.data);
-          break;
-        case "candidate":
-          handleCandidate(data.data);
-          break;
-        case "end":
-          closePeerConnection();
-          break;
-        default:
-          console.warn("알 수 없는 메시지 타입:", data.type);
+        const data = JSON.parse(message.body);
+        console.log("📩 시그널 수신:", data);
+        switch (data.type) {
+          case "offer":
+            (async () => {
+              let pc = peerConnection;
+              if (!pc) {
+                pc = createPeerConnection(); // 👉 반환값을 반드시 받아야 함
+                setPeerConnection(pc);
+              }
+              try {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.data));
+                setRemoteDescriptionSet(true);
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                sendSignalToPeer("answer", data.from, answer);
+              } catch (e) {
+                console.error("❌ Offer 처리 실패:", e);
+              }
+            })();
+            break;
+          case "answer":
+            handleAnswer(data.data);
+            break;
+          case "candidate":
+            handleCandidate(data.data); 
+            break;
+          case "end":
+            closePeerConnection();
+            break;
+          default:
+            console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
+        }
       }
-    });
+    );
 
-    return () => subscription.unsubscribe();
-  }, [stompClient, connected, peerConnection]);
+    return () => { if (subscription) subscription.unsubscribe(); };
+  }, [stompClient, connected, handleCandidate]);
 
   useEffect(() => {
-    const init = async () => {
-      await getDevices();
+    const initCall = async () => {
       await startCamera();
       await startMic();
       const user = localStorage.getItem("useremail");
       setCurrentUserId(user);
-      if (!incoming && callerId && receiverId) createOffer();
+
+      if (!incoming && callerId && receiverId) {
+        createOffer();
+      }
     };
 
-    init();
+    initCall();
   }, []);
 
   return (
     <VideoContainer>
-      {callAccepted && <AcceptedMessage>상대방이 전화를 받았습니다</AcceptedMessage>}
+      {callAccepted && (
+        <AcceptedMessage>상대방이 전화를 받았습니다</AcceptedMessage>
+      )}
+
       <VideoArea>
-        <RemoteVideo ref={remoteVideoRef} autoPlay />
+        <RemoteVideo autoPlay playsInline ref={remoteVideoRef} />
         <LocalVideoWrapper>
           <LocalVideo ref={localVideoRef} autoPlay muted />
+          {!isCameraOn && (
+            <CenterProfileImage src="/profile.png" alt="프로필 이미지" />
+          )}
         </LocalVideoWrapper>
       </VideoArea>
-
-      <DeviceSelectArea>
-        <label>
-          🎥 카메라:
-          <select
-            value={selectedVideoDeviceId}
-            onChange={(e) => {
-              setSelectedVideoDeviceId(e.target.value);
-              startCamera(e.target.value);
-            }}
-          >
-            {videoDevices.map((device) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label || `카메라 ${device.deviceId}`}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          🎤 마이크:
-          <select
-            value={selectedAudioDeviceId}
-            onChange={(e) => {
-              setSelectedAudioDeviceId(e.target.value);
-              startMic(e.target.value);
-            }}
-          >
-            {audioDevices.map((device) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label || `마이크 ${device.deviceId}`}
-              </option>
-            ))}
-          </select>
-        </label>
-      </DeviceSelectArea>
 
       <ButtonSide>
         <IconButton
           src={isCameraOn ? "/camera-on.png" : "/camera-off.png"}
+          alt="카메라"
           onClick={() => {
             if (isCameraOn) {
               const track = localStreamRef.current?.getVideoTracks()[0];
               if (track) track.enabled = false;
               setIsCameraOn(false);
+              console.log("📷 카메라 끔");
             } else {
               startCamera();
             }
           }}
         />
+
         <IconButton
           src={isMicOn ? "/mic-on.png" : "/mic-off.png"}
+          alt="마이크"
           onClick={() => {
             if (isMicOn) {
               const track = localStreamRef.current?.getAudioTracks()[0];
               if (track) track.enabled = false;
               setIsMicOn(false);
+              console.log("🎤 마이크 끔");
             } else {
               startMic();
             }
           }}
-        />
-        <IconButton src="/endcall.png" onClick={endCall} />
+          />
+
+        <IconButton
+          src="/endcall.png"
+          alt="통화 종료"
+          onClick={() => {endCall();
+            navigate("/")}}
+          />
+        <button onClick={createOffer}>통화 시작</button>
       </ButtonSide>
+        <div style={{ padding: "10px", background: "#fff" }}>
+    <label>카메라 선택:</label>
+    <select
+      onChange={(e) => setSelectedCameraId(e.target.value)}
+      value={selectedCameraId || ""}
+      >
+      <option value="">기본 카메라</option>
+      {cameraDevices.map((device) => (
+        <option key={device.deviceId} value={device.deviceId}>
+          {device.label || "카메라"}
+        </option>
+      ))}
+    </select>
+
+    <label style={{ marginLeft: "1rem" }}>마이크 선택:</label>
+    <select
+      onChange={(e) => setSelectedMicId(e.target.value)}
+      value={selectedMicId || ""}
+      >
+      <option value="">기본 마이크</option>
+      {micDevices.map((device) => (
+        <option key={device.deviceId} value={device.deviceId}>
+          {device.label || "마이크"}
+        </option>
+      ))}
+        </select>
+      </div>
     </VideoContainer>
   );
 };
@@ -479,10 +537,4 @@ const AcceptedMessage = styled.div`
   border-radius: 10px;
   font-weight: bold;
   z-index: 999;
-`;
-const DeviceSelectArea = styled.div`
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin: 1rem;
 `;
