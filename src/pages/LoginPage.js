@@ -30,29 +30,92 @@ const LoginPage = () => {
         throw new Error("이메일 또는 비밀번호가 올바르지 않습니다.");
       }
 
+      console.log("Content-Type:", response.headers.get("Content-Type"));
+
       const data = await response.json();
+      console.log("✅ 응답 내용:", data);
 
-      const accessToken = data.accessToken; // 예: { accessToken: "xxx", refreshToken: "yyy" }
-      const refreshToken = data.refreshToken;
+      const { tokenResponse, user } = data;
 
-      if (!accessToken || !refreshToken) {
+      if (!tokenResponse?.accessToken || !tokenResponse?.refreshToken) {
         throw new Error("로그인 응답에 토큰이 없습니다.");
       }
 
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("username", data.username);
-      localStorage.setItem("useremail", data.email);
-      localStorage.setItem("userbio", data.userbio || ""); // userbio가 없으면 빈 문자열
-      localStorage.setItem("userprofile", data.userprofile || ""); // userprofile이 없으면 빈 문자열
+      localStorage.setItem("generalAccessToken", tokenResponse.accessToken);
+      localStorage.setItem("generalRefreshToken", tokenResponse.refreshToken);
+      localStorage.setItem("userid", user.userId);
+      localStorage.setItem("useremail", user.email);
+      localStorage.setItem("nickname", user.nickname);
+      localStorage.setItem("username", user.name);
+      localStorage.setItem("userbio", user.selfIntroduction || "");
+      localStorage.setItem("userprofile", user.profileImageUrl || "");
+
+      // const handleAuthLogin = async (useremail) => {
+      //   const query = new URLSearchParams({ useremail }).toString();
+
+      //   const response = await fetch(`/api/auth/login?${query}`, {
+      //     method: "POST",
+      //     headers: {
+      //       accept: "*/*",
+      //     },
+      //     body: "", // 빈 바디
+      //   });
+
+      //                 await handleAuthLogin(email);
+
+      //   if (!response.ok) {
+      //     console.error("❌ Auth login failed");
+      //     return;
+      //   }
+
+      //   // 응답 본문은 그냥 텍스트 (예: "로그인 성공")
+      //   const text = await response.text();
+      //   console.log("✅ Response body:", text);
+
+      //   // 🔑 헤더에서 토큰 꺼내기
+      //   const authaccessToken = response.headers.get("access-token");
+      //   const authrefreshToken = response.headers.get("refresh-token");
+
+      //   console.log("📥 accessToken:", authaccessToken);
+      //   console.log("📥 refreshToken:", authrefreshToken);
+
+      //   if (!authaccessToken || !authrefreshToken) {
+      //     console.error("❌ 토큰 헤더가 없습니다.");
+      //     return;
+      //   }
+
+      //   // 🧠 저장
+      //   localStorage.setItem("authAccessToken", authaccessToken);
+      //   localStorage.setItem("authRefreshToken", authrefreshToken);
+
+      //   console.log(
+      //     "✅ 저장된 accessToken:",
+      //     localStorage.getItem("authAccessToken")
+      //   );
+      //   console.log(
+      //     "✅ 저장된 refreshToken:",
+      //     localStorage.getItem("authRefreshToken")
+      //   );
+
+      //   // 토큰 저장
+      //   localStorage.setItem("authAccessToken", data.tokenResponse.accessToken);
+      //   localStorage.setItem(
+      //     "authRefreshToken",
+      //     data.tokenResponse.refreshToken
+      //   );
+
+      //   console.log("Auth tokens saved");
+      // };
 
       setMessage("로그인 성공!");
       // 로그인 성공 후 메인 페이지 이동
       navigate("/");
+
     } catch (error) {
       console.error("❌ 로그인 실패:", error.message);
       alert(error.message);
     }
+    
   };
 
   // 카카오 로그인

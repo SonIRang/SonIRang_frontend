@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import User from "../models/user";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useNavigate as useHistory } from "react-router-dom";
+import { useStompClient } from "../context/StompContext";
 
 import MyProfilePopup from "../components/MyProfilePopup";
 import FriendList from "../components/FriendList";
@@ -10,22 +11,31 @@ import FriendProfilePopup from "../components/FriendProfilePopup";
 import AddFriendPopup from "../components/AddFriendPopup";
 import EditProfilePopup from "../components/EditProfilePopup";
 
+// 수신 알림 모달 컴포넌트
+const IncomingCallModal = ({ callerId, onAccept, onReject }) => {
+  return (
+    <ModalBackdrop>
+      <ModalContent>
+        <p>{callerId}님이 통화를 걸고 있습니다.</p>
+        <button onClick={onAccept}>수락</button>
+        <button onClick={onReject}>거절</button>
+      </ModalContent>
+    </ModalBackdrop>
+  );
+};
+
 function MainPage() {
   const navigate = useNavigate();
+  const { stompClient, connected } = useStompClient();
 
+  const userId = localStorage.getItem("userid");
   const username = localStorage.getItem("username");
   const useremail = localStorage.getItem("useremail");
   const userbio = localStorage.getItem("userbio");
   const userprofile = localStorage.getItem("userprofile");
 
-  useEffect(() => {
-     // 사용자 정보 없으면 /login으로 리디렉트
-    if (!username || !useremail) {
-      navigate("/login");
-    }
-  }, [navigate, username, useremail]);
-
   const myUser = new User({
+    userId,
     profileImage: userprofile,
     name: username,
     email: useremail,
@@ -33,101 +43,117 @@ function MainPage() {
   });
 
   const [friends, setFriends] = useState([]);
+  const [search, setSearch] = useState("");
+  const [popupType, setPopupType] = useState(null);
+  const [selectedFriend, setSelectedFriend] = useState(null);
 
-  // 이메일로 userId 가져오기
+  const [incomingCallData, setIncomingCallData] = useState(null); // { from, data }
+
   useEffect(() => {
-    const fetchUserIdByEmail = async () => {
-      if (!useremail) return;
+    if (!username || !useremail) {
+      navigate("/login");
+    }
+  }, []);
 
-      try {
-        const response = await axios.get(
-          `/api/friends/search?email=${encodeURIComponent(useremail)}`
-        );
-
-        if (response.status === 200 && response.data.data) {
-          const fetchedUserId = response.data.data.userId;
-          const fetchedUserProfile =  response.data.data.profileImageUrl;
-          localStorage.setItem("userid", fetchedUserId);
-          localStorage.setItem("userprofile", fetchedUserProfile);
-          console.log("userId 저장됨:", fetchedUserId);
-        } else {
-          console.warn("userId를 찾을 수 없습니다.");
-        }
-      } catch (error) {
-        console.error("userId를 불러오는 데 실패했습니다:", error);
-      }
-    };
-
-    fetchUserIdByEmail();
-  }, [useremail]);
-
-  // 친구 목록 불러오기
   useEffect(() => {
     const fetchFriends = async () => {
-      const userId = localStorage.getItem("userid");
-      if (!userId) {
-        console.warn("userId 없음");
-        return;
-      }
-
       try {
         const response = await axios.get("/api/friends/list", {
           params: { userId },
         });
-
         const friendData = response.data.data.map(
           (friend) =>
             new User({
+              userId: friend.userId,
               name: friend.nickname,
               email: friend.email,
               profileImage: friend.profileImageUrl,
-              // 아직 서버에 구현 안 됨
-              //callHistory: ,
-              // bio: ,
+              lastCallTime: friend.lastCallTime,
+              lastCallDuration: friend.lastCallDuration,
             })
         );
-
         setFriends(friendData);
       } catch (error) {
-        console.error("친구 목록을 불러오는데 실패했습니다:", error);
+        console.error("❌ 친구 목록 로딩 실패:", error);
       }
     };
-
     fetchFriends();
   }, []);
-  
-  const [search, setSearch] = useState("");
-  const [popupType, setPopupType] = useState(null);
-  const [selectedFriend, setSelectedFriend] = useState(null);
-  
+
   const filteredFriends = friends.filter((friend) =>
     (friend.name ?? "").toLowerCase().includes((search ?? "").toLowerCase())
-);
+  );
 
-const openAddFriendPopup = () => {
+  const openAddFriendPopup = () => {
     setPopupType("addFriend");
     setSelectedFriend(null);
   };
-  
+
   const openProfilePopup = (friend) => {
     setPopupType("profile");
     setSelectedFriend(friend);
   };
-  
+
   const handleEditSave = (updatedUser) => {
     localStorage.setItem("username", updatedUser.name);
     localStorage.setItem("useremail", updatedUser.email);
     localStorage.setItem("userbio", updatedUser.bio);
-    setPopupType("myProfile")
+    setPopupType("myProfile");
   };
 
   const closePopup = () => {
     setPopupType(null);
     setSelectedFriend(null);
   };
-  
+
+  // WebRTC 신호 수신 처리
+  const handleSignalMessage = (message) => {
+    const { type, from, data } = message;
+    if (type === "offer") {
+      setIncomingCallData({ from, data });
+    }
+  };
+
+  // STOMP 구독 처리
+  useEffect(() => {
+    if (!stompClient || !connected) return;
+
+    const subscription = stompClient.subscribe("/user/queue/signal", (msg) => {
+      const message = JSON.parse(msg.body);
+      handleSignalMessage(message);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [stompClient, connected]);
+
+  // 수신 수락/거절 핸들링
+  const acceptCall = () => {
+    navigate("/meeting", {
+      state: {
+        incoming: true,
+        receiverId: incomingCallData.from, // 수신자 ID 추가
+        offer: incomingCallData.data,
+      },
+    });
+    setIncomingCallData(null);
+    localStorage.setItem("receiverEmail", incomingCallData.from);
+    localStorage.setItem("callerEmail", useremail);
+  };
+
+  const rejectCall = () => {
+    setIncomingCallData(null);
+    // 필요 시 "거절" 신호 보내기
+  };
+
   return (
     <MainContainer>
+      {incomingCallData && (
+        <IncomingCallModal
+          callerId={incomingCallData.from}
+          onAccept={acceptCall}
+          onReject={rejectCall}
+        />
+      )}
       <LeftSection>
         <Header>
           <Logo src="/title.png" alt="Logo" />
@@ -174,18 +200,26 @@ const openAddFriendPopup = () => {
         )}
         {popupType === "myProfile" && (
           <MyProfilePopup
-          key={myUser.email + myUser.name} // 프로필이 바뀌면 key도 바뀜
-          user={myUser}
-          onClose={closePopup}
-          onEditProfile={() => setPopupType("editProfile")}
+            key={myUser.email + myUser.name}
+            user={myUser}
+            onClose={closePopup}
+            onEditProfile={() => setPopupType("editProfile")}
           />
         )}
         {popupType === "addFriend" && <AddFriendPopup onClose={closePopup} />}
         {popupType === "profile" && selectedFriend && (
-          <FriendProfilePopup friend={selectedFriend} onClose={closePopup} />
-      )}
+          <FriendProfilePopup
+            client={stompClient}
+            friend={selectedFriend}
+            onClose={closePopup}
+          />
+        )}
         {popupType === "editProfile" && (
-          <EditProfilePopup user={myUser} onClose={closePopup} onSave={handleEditSave} />
+          <EditProfilePopup
+            user={myUser}
+            onClose={closePopup}
+            onSave={handleEditSave}
+          />
         )}
       </RightPanel>
     </MainContainer>
@@ -309,4 +343,24 @@ const NoResultText = styled.p`
   color: #999;
   text-align: center;
   margin-top: 20px;
+`;
+
+const ModalBackdrop = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ModalContent = styled.div`
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
 `;
