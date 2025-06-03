@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 import { over } from "stompjs";
 
-const ChatWindow = () => {
+const ChatWindow = ({ callHistoryId, callerId, receiverId }) => {
   const [stompClient, setStompClient] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
@@ -11,9 +11,8 @@ const ChatWindow = () => {
 
   const email = localStorage.getItem("useremail");
   const accessToken = localStorage.getItem("generalAccessToken");
-  const callHistoryId = localStorage.getItem("callHistoryId") || "6";
-  const receiverEmail = localStorage.getItem("receiverEmail");
-  const senderEmail = localStorage.getItem("callerEmail");
+  const senderEmail = localStorage.getItem("callerEmail") || "";   // caller 이메일
+  const receiverEmail = localStorage.getItem("receiverEmail") || ""; 
 
   const connectWebSocket = () => {
     if (!callHistoryId) {
@@ -25,6 +24,8 @@ const ChatWindow = () => {
       alert("이미 연결되어 있습니다.");
       return;
     }
+
+    console.log("💬 callHistoryId 확인:", callHistoryId);
 
     const socket = new SockJS("http://15.164.249.16:8080/ws/chat");
     const client = over(socket);
@@ -40,12 +41,14 @@ const ChatWindow = () => {
             if (!message.body) return;
 
             const msg = JSON.parse(message.body);
-            const sender = msg.senderEmail || "알 수 없음";
-            const content = msg.messageContent || "(내용 없음)";
-            const fullMsg = `[${sender}] ${content}`;
-            console.log("📥 수신된 메시지:", fullMsg);
+            console.log("📥 수신된 메시지:", msg);
 
-            setMessages((prev) => [...prev, fullMsg]);
+            setMessages((prev) => {
+              console.log("이전 메시지 리스트:", prev);
+              const updated = [...prev, msg];
+              console.log("업데이트된 메시지 리스트:", updated);
+              return updated;
+            });
           } catch (e) {
             console.error("메시지 파싱 오류", e);
           }
@@ -67,6 +70,11 @@ const ChatWindow = () => {
       return;
     }
 
+    if (!senderEmail || !receiverEmail) {
+      alert("❌ senderEmail 또는 receiverEmail이 없습니다.");
+      return;
+    }
+
     const chatMessage = {
       callHistoryId: Number(callHistoryId),
       senderEmail,
@@ -75,8 +83,8 @@ const ChatWindow = () => {
       messageContent: messageInput,
       createdAt: new Date().toISOString(),
     };
-
     stompClient.send("/pub/chat/send", {}, JSON.stringify(chatMessage));
+    // setMessages((prev) => [...prev, chatMessage]); // ✅ 여기서만 사용
     setMessageInput("");
   };
 
@@ -120,7 +128,12 @@ const ChatWindow = () => {
       <h3>💬 채팅 내용</h3>
       <ul style={{ maxHeight: "300px", overflowY: "auto" }}>
         {messages.map((msg, idx) => (
-          <li key={idx}>{msg}</li>
+          <li key={idx}>
+            <strong>
+              {msg.senderEmail === senderEmail ? "나" : msg.senderEmail}:
+            </strong>{" "}
+            {msg.messageContent || msg}
+          </li>
         ))}
         <div ref={messagesEndRef} />
       </ul>

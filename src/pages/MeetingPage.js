@@ -36,6 +36,8 @@ export default function MeetingPaget() {
         <ChatWindow
           isOpen={chatOpen}
           toggleChat={toggleChat}
+          callerId={callerId}
+          receiverId={receiverId}
           callHistoryId={callHistoryId}
         />
       </RightPanel>
