@@ -36,6 +36,8 @@ export default function MeetingPaget() {
         <ChatWindow
           isOpen={chatOpen}
           toggleChat={toggleChat}
+          callerId={callerId}
+          receiverId={receiverId}
           callHistoryId={callHistoryId}
         />
       </RightPanel>
@@ -46,11 +48,12 @@ export default function MeetingPaget() {
 const Container = styled.div`
   display: flex;
   height: 85%;
+  position: relative;
 `;
 
 const LeftPanel = styled.div`
-  height: calc(100% - 30px);
   flex-grow: 1;
+  height: 100%;
   padding: 5px;
   transition: margin-right 0.3s ease;
   border-radius: 30px;
@@ -67,4 +70,5 @@ const RightPanel = styled.div`
   padding: 5px;
   flex-direction: column;
   z-index: 2;
+  }
 `;

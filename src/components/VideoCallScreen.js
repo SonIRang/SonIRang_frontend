@@ -8,7 +8,7 @@ import {
   HandLandmarker,
 } from "@mediapipe/tasks-vision";
 
-const VideoCallScreen = () => {
+const VideoCallScreen = ({ setCallHistoryId }) => {
   const navigate = useNavigate();
 
   const location = useLocation();
@@ -71,6 +71,7 @@ handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
   })();
 }, []);
   
+
   useEffect(() => {
     const getDevices = async () => {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -91,7 +92,7 @@ handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
       startMic();
     }
   }, [selectedMicId]);
-  
+
   useEffect(() => {
     peerConnectionRef.current = peerConnection;
   }, [peerConnection]);
@@ -120,62 +121,64 @@ const sendDataToServer = async (data) => {
     });
   };
 
-const createPeerConnection = () => {
-  console.log("📞 createPeerConnection 호출됨");
+  const createPeerConnection = () => {
+    console.log("📞 createPeerConnection 호출됨");
 
-  if (peerConnectionRef.current) {
-    peerConnectionRef.current.close();
-    peerConnectionRef.current = null;
-  }
-
-  const pc = new RTCPeerConnection({
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-    ],
-  });
-
-  // 1. ICE 후보가 생기면 상대방에게 전송
-  pc.onicecandidate = (event) => {
-    if (event.candidate) {
-      console.log("📤 ICE 후보 전송:", event.candidate);
-      sendSignalToPeer("candidate", receiverId || callerId, event.candidate);
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
     }
-  };
 
-  // 2. 원격 스트림 수신 시 처리
-  pc.ontrack = (event) => {
-    console.log("🎥 원격 스트림 수신");
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = event.streams[0];
-    }
-  };
-
-  // 3. 연결 상태 모니터링
-  pc.onconnectionstatechange = () => {
-    console.log("🔄 연결 상태:", pc.connectionState);
-    if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
-      console.warn("⚠️ 연결 끊김 - 연결 종료 처리");
-      closePeerConnection();
-    }
-  };
-
-  // 4. 로컬 스트림이 있다면 트랙 추가
-  if (localStreamRef.current) {
-    localStreamRef.current.getTracks().forEach((track) => {
-      pc.addTrack(track, localStreamRef.current);
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ],
     });
-  }
 
-  // 상태 업데이트
-  setPeerConnection(pc);
-  peerConnectionRef.current = pc;
-  setRemoteDescriptionSet(false);
-  iceCandidateQueue.current = [];
+    // 1. ICE 후보가 생기면 상대방에게 전송
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        console.log("📤 ICE 후보 전송:", event.candidate);
+        sendSignalToPeer("candidate", receiverId || callerId, event.candidate);
+      }
+    };
 
-  return pc;
-};
+    // 2. 원격 스트림 수신 시 처리
+    pc.ontrack = (event) => {
+      console.log("🎥 원격 스트림 수신");
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
 
+    // 3. 연결 상태 모니터링
+    pc.onconnectionstatechange = () => {
+      console.log("🔄 연결 상태:", pc.connectionState);
+      if (
+        pc.connectionState === "disconnected" ||
+        pc.connectionState === "failed"
+      ) {
+        console.warn("⚠️ 연결 끊김 - 연결 종료 처리");
+        closePeerConnection();
+      }
+    };
+
+    // 4. 로컬 스트림이 있다면 트랙 추가
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => {
+        pc.addTrack(track, localStreamRef.current);
+      });
+    }
+
+    // 상태 업데이트
+    setPeerConnection(pc);
+    peerConnectionRef.current = pc;
+    setRemoteDescriptionSet(false);
+    iceCandidateQueue.current = [];
+
+    return pc;
+  };
 
   const createOffer = async () => {
     let pc = peerConnection;
@@ -213,19 +216,21 @@ const createPeerConnection = () => {
     }
   };
 
-const handleCandidate = useCallback((candidate) => {
-  if (!candidate) return;
-  if (remoteDescriptionSet && peerConnection) {
-    peerConnection
-      .addIceCandidate(new RTCIceCandidate(candidate))
-      .then(() => console.log("✅ ICE 후보 추가 성공"))
-      .catch((err) => console.error("❌ ICE 후보 추가 실패:", err));
-  } else {
-    console.log("📥 ICE 후보 대기열에 저장");
-    iceCandidateQueue.current.push(candidate);
-  }
-}, [peerConnection, remoteDescriptionSet]);
-
+  const handleCandidate = useCallback(
+    (candidate) => {
+      if (!candidate) return;
+      if (remoteDescriptionSet && peerConnection) {
+        peerConnection
+          .addIceCandidate(new RTCIceCandidate(candidate))
+          .then(() => console.log("✅ ICE 후보 추가 성공"))
+          .catch((err) => console.error("❌ ICE 후보 추가 실패:", err));
+      } else {
+        console.log("📥 ICE 후보 대기열에 저장");
+        iceCandidateQueue.current.push(candidate);
+      }
+    },
+    [peerConnection, remoteDescriptionSet]
+  );
 
   const closePeerConnection = () => {
     if (peerConnection) {
@@ -363,7 +368,9 @@ const startCamera = async () => {
   useEffect(() => {
     if (!stompClient || !connected) return;
 
-    const subscription = stompClient.subscribe("/user/queue/signal", (message) => {
+    const subscription = stompClient.subscribe(
+      "/user/queue/signal",
+      (message) => {
         const data = JSON.parse(message.body);
         console.log("📩 시그널 수신:", data);
         switch (data.type) {
@@ -375,7 +382,9 @@ const startCamera = async () => {
                 setPeerConnection(pc);
               }
               try {
-                await pc.setRemoteDescription(new RTCSessionDescription(data.data));
+                await pc.setRemoteDescription(
+                  new RTCSessionDescription(data.data)
+                );
                 setRemoteDescriptionSet(true);
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
@@ -389,10 +398,17 @@ const startCamera = async () => {
             handleAnswer(data.data);
             break;
           case "candidate":
-            handleCandidate(data.data); 
+            handleCandidate(data.data);
             break;
           case "end":
             closePeerConnection();
+            break;
+          case "callHistoryCreated":
+            console.log("✅ 통화 기록 생성됨:", data.callHistoryId);
+            // 💡 callHistoryId를 부모에서 내려준 setCallHistoryId를 호출해서 저장
+            if (setCallHistoryId) {
+              setCallHistoryId(data.callHistoryId);
+            }
             break;
           default:
             console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
@@ -400,7 +416,9 @@ const startCamera = async () => {
       }
     );
 
-    return () => { if (subscription) subscription.unsubscribe(); };
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, [stompClient, connected, handleCandidate]);
 
   useEffect(() => {
@@ -424,7 +442,10 @@ const startCamera = async () => {
         <AcceptedMessage>상대방이 전화를 받았습니다</AcceptedMessage>
       )}
 
+      
+
       <VideoArea>
+        <StartCallButton onClick={createOffer}>통화 시작</StartCallButton>
         <RemoteVideo autoPlay playsInline ref={remoteVideoRef} />
         <LocalVideoWrapper>
           <LocalVideo ref={localVideoRef} autoPlay muted />
@@ -463,41 +484,42 @@ const startCamera = async () => {
               startMic();
             }
           }}
-          />
+        />
 
         <IconButton
           src="/endcall.png"
           alt="통화 종료"
-          onClick={() => {endCall();
-            navigate("/")}}
-          />
-        <button onClick={createOffer}>통화 시작</button>
+          onClick={() => {
+            endCall();
+            navigate("/");
+          }}
+        />
       </ButtonSide>
-        <div style={{ padding: "10px", background: "#fff" }}>
-    <label>카메라 선택:</label>
-    <select
-      onChange={(e) => setSelectedCameraId(e.target.value)}
-      value={selectedCameraId || ""}
-      >
-      <option value="">기본 카메라</option>
-      {cameraDevices.map((device) => (
-        <option key={device.deviceId} value={device.deviceId}>
-          {device.label || "카메라"}
-        </option>
-      ))}
-    </select>
+      <div style={{ padding: "10px", background: "#fff" }}>
+        <label>카메라 선택:</label>
+        <select
+          onChange={(e) => setSelectedCameraId(e.target.value)}
+          value={selectedCameraId || ""}
+        >
+          <option value="">기본 카메라</option>
+          {cameraDevices.map((device) => (
+            <option key={device.deviceId} value={device.deviceId}>
+              {device.label || "카메라"}
+            </option>
+          ))}
+        </select>
 
-    <label style={{ marginLeft: "1rem" }}>마이크 선택:</label>
-    <select
-      onChange={(e) => setSelectedMicId(e.target.value)}
-      value={selectedMicId || ""}
-      >
-      <option value="">기본 마이크</option>
-      {micDevices.map((device) => (
-        <option key={device.deviceId} value={device.deviceId}>
-          {device.label || "마이크"}
-        </option>
-      ))}
+        <label style={{ marginLeft: "1rem" }}>마이크 선택:</label>
+        <select
+          onChange={(e) => setSelectedMicId(e.target.value)}
+          value={selectedMicId || ""}
+        >
+          <option value="">기본 마이크</option>
+          {micDevices.map((device) => (
+            <option key={device.deviceId} value={device.deviceId}>
+              {device.label || "마이크"}
+            </option>
+          ))}
         </select>
       </div>
     </VideoContainer>
@@ -505,6 +527,24 @@ const startCamera = async () => {
 };
 
 export default VideoCallScreen;
+
+const StartCallButton = styled.button`
+position: absolute;
+  width: 100px;
+  height: 30px;
+  padding: 10px;
+  margin: 10px;
+  background-color: #ca9cc3;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2 ;
+`;
 
 const VideoContainer = styled.div`
   width: 100%;
