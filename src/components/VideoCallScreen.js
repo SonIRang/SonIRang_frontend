@@ -356,7 +356,10 @@ const VideoCallScreen = ({ setCallHistoryId }) => {
         <AcceptedMessage>상대방이 전화를 받았습니다</AcceptedMessage>
       )}
 
+      
+
       <VideoArea>
+        <StartCallButton onClick={createOffer}>통화 시작</StartCallButton>
         <RemoteVideo autoPlay playsInline ref={remoteVideoRef} />
         <LocalVideoWrapper>
           <LocalVideo ref={localVideoRef} autoPlay muted />
@@ -405,7 +408,6 @@ const VideoCallScreen = ({ setCallHistoryId }) => {
             navigate("/");
           }}
         />
-        <button onClick={createOffer}>통화 시작</button>
       </ButtonSide>
       <div style={{ padding: "10px", background: "#fff" }}>
         <label>카메라 선택:</label>
@@ -439,6 +441,24 @@ const VideoCallScreen = ({ setCallHistoryId }) => {
 };
 
 export default VideoCallScreen;
+
+const StartCallButton = styled.button`
+position: absolute;
+  width: 100px;
+  height: 30px;
+  padding: 10px;
+  margin: 10px;
+  background-color: #ca9cc3;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2 ;
+`;
 
 const VideoContainer = styled.div`
   width: 100%;
