@@ -18,7 +18,7 @@ const ChatWindow = ({
 
   const email = localStorage.getItem("useremail");
   const accessToken = localStorage.getItem("generalAccessToken");
-  const senderEmail = localStorage.getItem("callerEmail") || ""; // caller 이메일
+  const senderEmail = localStorage.getItem("callerEmail") || ""; // caller 이메일Add commentMore actions
   const receiverEmail = localStorage.getItem("receiverEmail") || "";
 
   const connectWebSocket = () => {
