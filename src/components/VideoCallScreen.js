@@ -280,7 +280,7 @@ const startCamera = async () => {
     console.log("videoElement.readyState:", videoElement?.readyState);
 
     const intervalId = setInterval(async () => {
-      console.log("tick");
+      // console.log("tick");
       if (!videoElement || videoElement.readyState < 2) {
         console.log("video not ready");
         return;
@@ -307,7 +307,7 @@ const startCamera = async () => {
         }
 
         // console.log({ face: faceCoords, hand: handCoords });
-        sendDataToServer({ face: faceCoords, hand: handCoords });
+        // sendDataToServer({ face: faceCoords, hand: handCoords });
       } catch (e) {
         console.error("detectForVideo error:", e);
       }
