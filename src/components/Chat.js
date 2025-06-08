@@ -18,8 +18,9 @@ const ChatWindow = ({
 
   const email = localStorage.getItem("useremail");
   const accessToken = localStorage.getItem("generalAccessToken");
-  const senderEmail = localStorage.getItem("callerEmail") || ""; // caller 이메일Add commentMore actions
-  const receiverEmail = localStorage.getItem("receiverEmail") || "";
+  const senderId = callerId;
+  // const senderEmail = localStorage.getItem("callerEmail") || ""; // caller 이메일Add commentMore actions
+  // const receiverEmail = localStorage.getItem("receiverEmail") || "";
 
   const connectWebSocket = () => {
     if (!callHistoryId) {
@@ -77,21 +78,21 @@ const ChatWindow = ({
       return;
     }
 
-    if (!senderEmail || !receiverEmail) {
-      alert("❌ senderEmail 또는 receiverEmail이 없습니다.");
+    if (!callerId || !receiverId) {
+      alert("❌ callerId 또는 receiverId가 없습니다.");
       return;
     }
 
     const chatMessage = {
       callHistoryId: Number(callHistoryId),
-      senderEmail,
-      receiverEmail,
+      senderId: callerId,
+      receiverId: receiverId, // 그냥 receiverId 사용
       messageType: "TEXT",
       messageContent: messageInput,
       createdAt: new Date().toISOString(),
     };
-    stompClient.send("/pub/chat/send", {}, JSON.stringify(chatMessage));
-    // setMessages((prev) => [...prev, chatMessage]); // ✅ 여기서만 사용
+    // stompClient.send("/pub/chat/send", {}, JSON.stringify(chatMessage));
+    setMessages((prev) => [...prev, chatMessage]); // ✅ 여기서만 사용
     setMessageInput("");
   };
 
@@ -131,7 +132,7 @@ const ChatWindow = ({
 
         <ChatBox>
           {messages.map((msg, idx) => {
-            const isMe = msg.senderEmail === senderEmail;
+            const isMe = msg.senderId === senderId;
             return (
               <ChatRow key={idx} isMe={isMe}>
                 <div>

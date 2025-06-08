@@ -50,7 +50,7 @@ function SignupPage() {
 
     try {
       const res = await axios.get("/api/users/verify-email", {
-        params: { token: code }, // 인증번호
+        params: { token: code },
         headers: {
           Accept: "*/*",
         },
@@ -58,19 +58,21 @@ function SignupPage() {
 
       console.log("서버 응답:", res.data);
 
-      if (res.data.verified) {
-        setIsVerified(true); // 인증 상태 업데이트
-        setMessage("이메일 인증 성공!");
-        //console.log("✅ 이메일 인증 완료"); // 🔥 이 부분이 핵심
+      // 응답이 text/plain이므로 res.data는 문자열
+      if (
+        typeof res.data === "string" &&
+        res.data.includes("이메일 인증이 완료되었습니다")
+      ) {
+        setIsVerified(true);
+        setMessage(res.data); // "이메일 인증이 완료되었습니다. 회원가입을 진행해주세요."
       } else {
-        setMessage("유효하지 않은 토큰입니다.");
+        setMessage("예상치 못한 응답입니다: " + res.data);
       }
     } catch (err) {
       if (err.response?.status === 403) {
-        // 🔥 403도 성공으로 처리
         console.warn("403 오류 발생했지만 인증 성공으로 간주합니다.");
         setIsVerified(true);
-        setMessage("이메일 인증 성공! (403 처리)");
+        setMessage("이메일 인증 성공!");
       } else if (err.response?.status === 404) {
         setMessage("존재하지 않거나 만료된 토큰입니다.");
       } else {
