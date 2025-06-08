@@ -109,6 +109,19 @@ const sendDataToServer = async (data) => {
     console.error("❌ 서버 전송 실패:", error);
   }
 };
+
+const sendCallhistoryId = async (data) => {
+  try {
+    await fetch('/api/landmark/prepare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    console.log("✅ callHistoryId 전송 성공");
+  } catch (error) {
+    console.error("❌ callHistoryId 전송 실패:", error);
+  }
+};
   
   const sendSignalToPeer = (type, to, data = null) => {
     if (!stompClient || !stompClient.connected) {
@@ -409,6 +422,7 @@ const startCamera = async () => {
             if (setCallHistoryId) {
               setCallHistoryId(data.callHistoryId);
             }
+            sendCallhistoryId({ callHistoryId: data.callHistoryId, senderEmail: location.state?.callerId });
             break;
           default:
             console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
