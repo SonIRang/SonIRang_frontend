@@ -5,6 +5,7 @@ import axios from "axios";
 
 function FriendProfilePopup({ friend, onClose }) {
   const navigate = useNavigate();
+  const userId = localStorage.getItem("userid");
 
   const handleCallClick = () => {
     const receiverId = friend.userId;
@@ -33,7 +34,7 @@ function FriendProfilePopup({ friend, onClose }) {
   const handleDeleteClick = async () => {
     try {
       const response = await axios.post(
-        `/api/friends/delete?requesterId=1`,
+        `/api/friends/delete?requesterId=${userId}`,
         {
           targetEmail: friend.email,
         },
