@@ -97,6 +97,46 @@ handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
     peerConnectionRef.current = peerConnection;
   }, [peerConnection]);
 
+  useEffect(() => {
+    let intervalId;
+    if (isCameraOn) {
+      intervalId = setInterval(async () => {
+      if (!faceLandmarkerRef.current || !handLandmarkerRef.current) {
+        console.log("model not loaded yet");
+        return;
+      }
+
+      const videoElement = localVideoRef.current;
+        if (!videoElement) return;
+
+      try {
+        const nowInMs = performance.now();
+        const faceResult = await faceLandmarkerRef.current.detectForVideo(videoElement, nowInMs);
+        const handResult = await handLandmarkerRef.current.detectForVideo(videoElement, nowInMs);
+
+        let faceCoords = [];
+        if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
+          faceCoords = faceResult.faceLandmarks[0].map((p) => [p.x, p.y, p.z]).flat();
+        }
+        let handCoords = [];
+        if (handResult.landmarks && handResult.landmarks.length > 0) {
+          handResult.landmarks.forEach((landmarkArray) => {
+            handCoords = handCoords.concat(landmarkArray.map((p) => [p.x, p.y, p.z]).flat());
+          });
+        }
+
+        // console.log({ face: faceCoords, hand: handCoords });
+        sendDataToServer({ face: faceCoords, hand: handCoords });
+      } catch (e) {
+        console.error("detectForVideo error:", e);
+      }
+    }, 300);
+  }
+   return () => {
+    clearInterval(intervalId); // 컴포넌트 unmount 또는 카메라 종료 시 제거
+  };
+  }, [isCameraOn, modelsLoaded]);
+
 const sendDataToServer = async (data) => {
   try {
     await fetch('/api/landmark', {
@@ -291,43 +331,6 @@ const startCamera = async () => {
     const videoElement = localVideoRef.current;
     console.log("videoElement:", videoElement);
     console.log("videoElement.readyState:", videoElement?.readyState);
-
-    const intervalId = setInterval(async () => {
-      console.log("tick");
-      if (!videoElement || videoElement.readyState < 2) {
-        console.log("video not ready");
-        return;
-      }
-      if (!faceLandmarkerRef.current || !handLandmarkerRef.current) {
-        console.log("model not loaded yet");
-        return;
-      }
-
-      try {
-        const nowInMs = performance.now();
-        const faceResult = await faceLandmarkerRef.current.detectForVideo(videoElement, nowInMs);
-        const handResult = await handLandmarkerRef.current.detectForVideo(videoElement, nowInMs);
-
-        let faceCoords = [];
-        if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
-          faceCoords = faceResult.faceLandmarks[0].map((p) => [p.x, p.y, p.z]).flat();
-        }
-        let handCoords = [];
-        if (handResult.landmarks && handResult.landmarks.length > 0) {
-          handResult.landmarks.forEach((landmarkArray) => {
-            handCoords = handCoords.concat(landmarkArray.map((p) => [p.x, p.y, p.z]).flat());
-          });
-        }
-
-        // console.log({ face: faceCoords, hand: handCoords });
-        sendDataToServer({ face: faceCoords, hand: handCoords });
-      } catch (e) {
-        console.error("detectForVideo error:", e);
-      }
-    }, 22);
-
-    // 필요 시 clearInterval(intervalId) 처리
-
   } catch (err) {
     console.error("❌ 카메라 시작 실패:", err);
     alert("카메라 권한을 확인해주세요.");
