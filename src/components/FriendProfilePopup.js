@@ -25,7 +25,7 @@ function FriendProfilePopup({ friend, onClose }) {
     localStorage.setItem("receiverId", receiverId);
     navigate("/meeting", {
       state: {
-        callerId: localStorage.getItem("usereamil"), // 로그인한 사용자 ID
+        callerId: localStorage.getItem("useremail"), // 로그인한 사용자 ID
         receiverId: friend.email,
         incoming: false, // 전화를 거는 쪽이므로 false
       },
