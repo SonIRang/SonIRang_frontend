@@ -44,6 +44,8 @@ const ChatWindow = ({
         console.log("✅ WebSocket 연결됨", frame);
 
         const subscribePath = `/sub/chat/room/${callHistoryId}`;
+        console.log("path:", subscribePath);
+
         client.subscribe(subscribePath, (message) => {
           try {
             if (!message.body) return;
@@ -134,9 +136,9 @@ const ChatWindow = ({
           {messages.map((msg, idx) => {
             const isMe = msg.senderId === callerId;
             return (
-              <ChatRow key={idx} isMe={isMe}>
+              <ChatRow key={idx} $isMe={isMe}>
                 <div>
-                  <ChatBubble isMe={isMe}>{msg.messageContent}</ChatBubble>
+                  <ChatBubble $isMe={isMe}>{msg.messageContent}</ChatBubble>
                 </div>
               </ChatRow>
             );
@@ -251,7 +253,7 @@ const ChatBox = styled.div`
 
 const ChatRow = styled.div`
   display: flex;
-  justify-content: ${(props) => (props.isMe ? "flex-end" : "flex-start")};
+  justify-content: ${(props) => (props.$isMe ? "flex-end" : "flex-start")};
   width: 100%;
   margin-bottom: 10px;
 `;
@@ -261,9 +263,9 @@ const ChatBubble = styled.div`Add commentMore actions
   padding: 10px 14px;
   margin-bottom: 8px;
   border-radius: 18px;
-  background-color: ${(props) => (props.isMe ? "#fff" : "#fff")};
-  color: ${(props) => (props.isMe ? "#000" : "#000")};
-  align-self: ${(props) => (props.isMe ? "flex-end" : "flex-start")};
+  background-color: ${(props) => (props.$isMe ? "#fff" : "#fff")};
+  color: ${(props) => (props.$isMe ? "#000" : "#000")};
+  align-self: ${(props) => (props.$isMe ? "flex-end" : "flex-start")};
   max-width: 70%;
   word-break: break-word;
   white-space: pre-wrap;
