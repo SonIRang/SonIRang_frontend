@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { format } from 'date-fns';
 
 function FriendProfilePopup({ friend, onClose }) {
   const navigate = useNavigate();
@@ -70,13 +71,18 @@ function FriendProfilePopup({ friend, onClose }) {
 
       <SectionTitle>통화 기록</SectionTitle>
       <CallHistoryList>
-        {friend.callHistory?.length > 0 ? (
+        {/* {friend.lastCallDuration?.length > 0 ? (
           friend.callHistory.map((call, index) => (
             <CallItem key={index}>{call}</CallItem>
           ))
-        ) : (
+        )
+        : (
           <CallItem>기록 없음</CallItem>
-        )}
+        )} */}
+        <CallItem>
+          <span>{friend.lastCallTime ? format(new Date(friend.lastCallTime), 'yyyy/MM/dd HH:mm') : "기록 없음"}</span>
+          <span>{friend.lastCallDuration || '0'}초</span>
+        </CallItem>
       </CallHistoryList>
 
       <ButtonGroup>
@@ -159,8 +165,9 @@ const CallItem = styled.div`
   background: #f5f5f5;
   border-radius: 10px;
   padding: 12px 16px;
-  text-align: left;
   font-size: 14px;
+  display: flex;
+  justify-content: space-between;
 `;
 
 const ButtonGroup = styled.div`

@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import { format } from 'date-fns';
 
 function FriendList({ friends, onFriendClick }) {
   const navigate = useNavigate();
@@ -16,8 +17,12 @@ function FriendList({ friends, onFriendClick }) {
           <InfoContainer>
             <FriendName>{friend.name}</FriendName>
             <LastCall>
-              최근 통화일:{" "}
-              {friend.callHistory?.[friend.callHistory.length - 1] || "없음"}
+              최근 통화:{
+                friend.lastCallTime
+                ? format(new Date(friend.lastCallTime), 'yyyy/MM/dd HH:mm')
+                : 
+                "없음"}
+              {/* {friend.callHistory?.[friend.callHistory.length - 1] || "없음"} */}
             </LastCall>
           </InfoContainer>
           <CallIconWrapper>
