@@ -18,7 +18,7 @@ const ChatWindow = ({
 
   const email = localStorage.getItem("useremail");
   const accessToken = localStorage.getItem("generalAccessToken");
-  const senderId = callerId;
+  // const senderId = callerId;
   // const senderEmail = localStorage.getItem("callerEmail") || ""; // caller 이메일Add commentMore actions
   // const receiverEmail = localStorage.getItem("receiverEmail") || "";
 
@@ -91,7 +91,7 @@ const ChatWindow = ({
       messageContent: messageInput,
       createdAt: new Date().toISOString(),
     };
-    // stompClient.send("/pub/chat/send", {}, JSON.stringify(chatMessage));
+    stompClient.send("/pub/chat/send", {}, JSON.stringify(chatMessage));
     setMessages((prev) => [...prev, chatMessage]); // ✅ 여기서만 사용
     setMessageInput("");
   };
@@ -132,7 +132,7 @@ const ChatWindow = ({
 
         <ChatBox>
           {messages.map((msg, idx) => {
-            const isMe = msg.senderId === senderId;
+            const isMe = msg.senderId === callerId;
             return (
               <ChatRow key={idx} isMe={isMe}>
                 <div>

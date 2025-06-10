@@ -8,10 +8,13 @@ export default function MeetingPaget() {
   const [chatOpen, setChatOpen] = useState(false);
   const [callHistoryId, setCallHistoryId] = useState(null);
 
+  const [callerIdFromSignal, setCallerIdFromSignal] = useState(null);
+  const [receiverIdFromSignal, setReceiverIdFromSignal] = useState(null);
+
   const location = useLocation();
   const {
-    callerId,
-    receiverId,
+    callerId: initialCallerId,
+    receiverId: initialReceiverId,
     incoming,
     offer: offerFromCaller,
   } = location.state || {};
@@ -19,6 +22,11 @@ export default function MeetingPaget() {
   const toggleChat = () => {
     setChatOpen((prev) => !prev);
   };
+
+  const callerId = callerIdFromSignal || initialCallerId;
+  const receiverId = receiverIdFromSignal || initialReceiverId;
+
+  console.log("아이디 확인",callerId, receiverId);
 
   return (
     <Container>
@@ -29,6 +37,8 @@ export default function MeetingPaget() {
           offer={offerFromCaller}
           incoming={incoming}
           setCallHistoryId={setCallHistoryId}
+          setCallerId={setCallerIdFromSignal}
+          setReceiverId={setReceiverIdFromSignal}
         />
       </LeftPanel>
 

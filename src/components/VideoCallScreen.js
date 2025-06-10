@@ -8,7 +8,7 @@ import {
   HandLandmarker,
 } from "@mediapipe/tasks-vision";
 
-const VideoCallScreen = ({ setCallHistoryId }) => {
+const VideoCallScreen = ({ setCallHistoryId, setCallerId, setReceiverId }) => {
   const navigate = useNavigate();
 
   const location = useLocation();
@@ -42,35 +42,40 @@ const VideoCallScreen = ({ setCallHistoryId }) => {
   const handLandmarkerRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
 
-useEffect(() => {
-  (async () => {
-    const vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
-    );
+  useEffect(() => {
+    (async () => {
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
+      );
 
-faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
-  baseOptions: {
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-  },
-  runningMode: "VIDEO",
-  numFaces: 1,
-});
+      faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(
+        vision,
+        {
+          baseOptions: {
+            modelAssetPath:
+              "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+          },
+          runningMode: "VIDEO",
+          numFaces: 1,
+        }
+      );
 
-handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
-  baseOptions: {
-    modelAssetPath:
-      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-  },
-  runningMode: "VIDEO",
-  numHands: 2,
-});
+      handLandmarkerRef.current = await HandLandmarker.createFromOptions(
+        vision,
+        {
+          baseOptions: {
+            modelAssetPath:
+              "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+          },
+          runningMode: "VIDEO",
+          numHands: 2,
+        }
+      );
 
-    setModelsLoaded(true);
-    console.log("✅ MediaPipe 모델 로드 완료");
-  })();
-}, []);
-  
+      setModelsLoaded(true);
+      console.log("✅ MediaPipe 모델 로드 완료");
+    })();
+  }, []);
 
   useEffect(() => {
     const getDevices = async () => {
@@ -97,32 +102,32 @@ handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
     peerConnectionRef.current = peerConnection;
   }, [peerConnection]);
 
-const sendDataToServer = async (data) => {
-  try {
-    await fetch('/api/landmark', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    console.log("✅ 서버로 데이터 전송 성공");
-  } catch (error) {
-    console.error("❌ 서버 전송 실패:", error);
-  }
-};
+  const sendDataToServer = async (data) => {
+    try {
+      await fetch("/api/landmark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      console.log("✅ 서버로 데이터 전송 성공");
+    } catch (error) {
+      console.error("❌ 서버 전송 실패:", error);
+    }
+  };
 
-const sendCallhistoryId = async (data) => {
-  try {
-    await fetch('/api/landmark/prepare', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    console.log("✅ callHistoryId 전송 성공");
-  } catch (error) {
-    console.error("❌ callHistoryId 전송 실패:", error);
-  }
-};
-  
+  const sendCallhistoryId = async (data) => {
+    try {
+      await fetch("/api/landmark/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      console.log("✅ callHistoryId 전송 성공");
+    } catch (error) {
+      console.error("❌ callHistoryId 전송 실패:", error);
+    }
+  };
+
   const sendSignalToPeer = (type, to, data = null) => {
     if (!stompClient || !stompClient.connected) {
       console.warn("❗ STOMP 클라이언트가 연결되지 않음");
@@ -260,80 +265,90 @@ const sendCallhistoryId = async (data) => {
     closePeerConnection();
   };
 
-const startCamera = async () => {
-  if (!modelsLoaded) {
-    console.warn("모델이 아직 로드되지 않았습니다.");
-    return;
-  }
-  try {
-    const cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
-    });
-    console.log("✅ getUserMedia (video) 성공", cameraStream);
-
-    const videoTrack = cameraStream.getVideoTracks()[0];
-    if (!localStreamRef.current) {
-      localStreamRef.current = new MediaStream();
+  const startCamera = async () => {
+    if (!modelsLoaded) {
+      console.warn("모델이 아직 로드되지 않았습니다.");
+      return;
     }
-    const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
-    if (oldVideoTrack) {
-      localStreamRef.current.removeTrack(oldVideoTrack);
-      oldVideoTrack.stop();
-    }
+    try {
+      const cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: selectedCameraId
+          ? { deviceId: { exact: selectedCameraId } }
+          : true,
+      });
+      console.log("✅ getUserMedia (video) 성공", cameraStream);
 
-    localStreamRef.current.addTrack(videoTrack);
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
-    }
-    console.log("로컬 스트림:", localStreamRef.current);
-    setIsCameraOn(true);
-
-    const videoElement = localVideoRef.current;
-    console.log("videoElement:", videoElement);
-    console.log("videoElement.readyState:", videoElement?.readyState);
-
-    const intervalId = setInterval(async () => {
-      console.log("tick");
-      if (!videoElement || videoElement.readyState < 2) {
-        console.log("video not ready");
-        return;
+      const videoTrack = cameraStream.getVideoTracks()[0];
+      if (!localStreamRef.current) {
+        localStreamRef.current = new MediaStream();
       }
-      if (!faceLandmarkerRef.current || !handLandmarkerRef.current) {
-        console.log("model not loaded yet");
-        return;
+      const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (oldVideoTrack) {
+        localStreamRef.current.removeTrack(oldVideoTrack);
+        oldVideoTrack.stop();
       }
 
-      try {
-        const nowInMs = performance.now();
-        const faceResult = await faceLandmarkerRef.current.detectForVideo(videoElement, nowInMs);
-        const handResult = await handLandmarkerRef.current.detectForVideo(videoElement, nowInMs);
+      localStreamRef.current.addTrack(videoTrack);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+      console.log("로컬 스트림:", localStreamRef.current);
+      setIsCameraOn(true);
 
-        let faceCoords = [];
-        if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
-          faceCoords = faceResult.faceLandmarks[0].map((p) => [p.x, p.y, p.z]).flat();
+      const videoElement = localVideoRef.current;
+      console.log("videoElement:", videoElement);
+      console.log("videoElement.readyState:", videoElement?.readyState);
+
+      const intervalId = setInterval(async () => {
+        console.log("tick");
+        if (!videoElement || videoElement.readyState < 2) {
+          console.log("video not ready");
+          return;
         }
-        let handCoords = [];
-        if (handResult.landmarks && handResult.landmarks.length > 0) {
-          handResult.landmarks.forEach((landmarkArray) => {
-            handCoords = handCoords.concat(landmarkArray.map((p) => [p.x, p.y, p.z]).flat());
-          });
+        if (!faceLandmarkerRef.current || !handLandmarkerRef.current) {
+          console.log("model not loaded yet");
+          return;
         }
 
-        // console.log({ face: faceCoords, hand: handCoords });
-        sendDataToServer({ face: faceCoords, hand: handCoords });
-      } catch (e) {
-        console.error("detectForVideo error:", e);
-      }
-    }, 22);
+        try {
+          const nowInMs = performance.now();
+          const faceResult = await faceLandmarkerRef.current.detectForVideo(
+            videoElement,
+            nowInMs
+          );
+          const handResult = await handLandmarkerRef.current.detectForVideo(
+            videoElement,
+            nowInMs
+          );
 
-    // 필요 시 clearInterval(intervalId) 처리
+          let faceCoords = [];
+          if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
+            faceCoords = faceResult.faceLandmarks[0]
+              .map((p) => [p.x, p.y, p.z])
+              .flat();
+          }
+          let handCoords = [];
+          if (handResult.landmarks && handResult.landmarks.length > 0) {
+            handResult.landmarks.forEach((landmarkArray) => {
+              handCoords = handCoords.concat(
+                landmarkArray.map((p) => [p.x, p.y, p.z]).flat()
+              );
+            });
+          }
 
-  } catch (err) {
-    console.error("❌ 카메라 시작 실패:", err);
-    alert("카메라 권한을 확인해주세요.");
-  }
-};
+          // console.log({ face: faceCoords, hand: handCoords });
+          sendDataToServer({ face: faceCoords, hand: handCoords });
+        } catch (e) {
+          console.error("detectForVideo error:", e);
+        }
+      }, 22);
 
+      // 필요 시 clearInterval(intervalId) 처리
+    } catch (err) {
+      console.error("❌ 카메라 시작 실패:", err);
+      alert("카메라 권한을 확인해주세요.");
+    }
+  };
 
   const startMic = async () => {
     try {
@@ -417,12 +432,21 @@ const startCamera = async () => {
             closePeerConnection();
             break;
           case "callHistoryCreated":
-            console.log("✅ 통화 기록 생성됨:", data.callHistoryId);
+            console.log("✅ 통화 기록 생성됨:", data);
             // 💡 callHistoryId를 부모에서 내려준 setCallHistoryId를 호출해서 저장
             if (setCallHistoryId) {
               setCallHistoryId(data.callHistoryId);
             }
-            sendCallhistoryId({ callHistoryId: data.callHistoryId, senderEmail: location.state?.callerId });
+            if (setCallerId && data.callerId) {
+              setCallerId(data.callerId);
+            }
+            if (setReceiverId && data.receiverId) {
+              setReceiverId(data.receiverId);
+            }
+            sendCallhistoryId({
+              callHistoryId: data.callHistoryId,
+              senderEmail: location.state?.callerId,
+            });
             break;
           default:
             console.warn("⚠️ 알 수 없는 메시지 타입:", data.type);
@@ -455,8 +479,6 @@ const startCamera = async () => {
       {callAccepted && (
         <AcceptedMessage>상대방이 전화를 받았습니다</AcceptedMessage>
       )}
-
-      
 
       <VideoArea>
         <StartCallButton onClick={createOffer}>통화 시작</StartCallButton>
@@ -543,7 +565,7 @@ const startCamera = async () => {
 export default VideoCallScreen;
 
 const StartCallButton = styled.button`
-position: absolute;
+  position: absolute;
   width: 100px;
   height: 30px;
   padding: 10px;
@@ -557,7 +579,7 @@ position: absolute;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2 ;
+  z-index: 2;
 `;
 
 const VideoContainer = styled.div`
