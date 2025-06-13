@@ -18,9 +18,11 @@ const ChatWindow = ({
 
   const email = localStorage.getItem("useremail");
   const accessToken = localStorage.getItem("generalAccessToken");
-  const senderId = callerId;
-  // const senderEmail = localStorage.getItem("callerEmail") || ""; // caller 이메일Add commentMore actions
-  // const receiverEmail = localStorage.getItem("receiverEmail") || "";
+  const senderEmail = localStorage.getItem("useremail") || ""; // caller 이메일
+  let receiverEmail = localStorage.getItem("receiverEmail") || "";
+  if (receiverEmail === senderEmail) {
+    receiverEmail = localStorage.getItem("callerEmail");
+  }
 
   const connectWebSocket = () => {
     if (!callHistoryId) {
@@ -34,6 +36,10 @@ const ChatWindow = ({
     }
 
     console.log("💬 callHistoryId 확인:", callHistoryId);
+    console.log("calleremail:", callerId);
+    console.log("receiveremail:", receiverId);
+    console.log("senderemail:", senderEmail);
+    console.log("receiveremail:", receiverEmail);
 
     const socket = new SockJS("http://15.164.249.16:8080/ws/chat");
     const client = over(socket);
@@ -78,21 +84,21 @@ const ChatWindow = ({
       return;
     }
 
-    if (!callerId || !receiverId) {
-      alert("❌ callerId 또는 receiverId가 없습니다.");
+    if (!senderEmail || !receiverEmail) {
+      alert("❌ senderEmail 또는 receiverEmail이 없습니다.");
       return;
     }
 
     const chatMessage = {
       callHistoryId: Number(callHistoryId),
-      senderId: callerId,
-      receiverId: receiverId, // 그냥 receiverId 사용
+      senderEmail,
+      receiverEmail,
       messageType: "TEXT",
       messageContent: messageInput,
       createdAt: new Date().toISOString(),
     };
-    // stompClient.send("/pub/chat/send", {}, JSON.stringify(chatMessage));
-    setMessages((prev) => [...prev, chatMessage]); // ✅ 여기서만 사용
+    stompClient.send("/pub/chat/send", {}, JSON.stringify(chatMessage));
+    // setMessages((prev) => [...prev, chatMessage]); // ✅ 여기서만 사용
     setMessageInput("");
   };
 
@@ -132,7 +138,7 @@ const ChatWindow = ({
 
         <ChatBox>
           {messages.map((msg, idx) => {
-            const isMe = msg.senderId === senderId;
+            const isMe = msg.senderEmail === senderEmail;
             return (
               <ChatRow key={idx} isMe={isMe}>
                 <div>
