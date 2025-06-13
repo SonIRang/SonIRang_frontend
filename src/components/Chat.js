@@ -18,9 +18,11 @@ const ChatWindow = ({
 
   const email = localStorage.getItem("useremail");
   const accessToken = localStorage.getItem("generalAccessToken");
-  // const senderId = callerId;
-  // const senderEmail = localStorage.getItem("callerEmail") || ""; // caller 이메일Add commentMore actions
-  // const receiverEmail = localStorage.getItem("receiverEmail") || "";
+  const senderEmail = localStorage.getItem("useremail") || ""; // caller 이메일
+  let receiverEmail = localStorage.getItem("receiverEmail") || "";
+  if (receiverEmail === senderEmail) {
+    receiverEmail = localStorage.getItem("callerEmail");
+  }
 
   const connectWebSocket = () => {
     if (!callHistoryId) {
@@ -34,6 +36,10 @@ const ChatWindow = ({
     }
 
     console.log("💬 callHistoryId 확인:", callHistoryId);
+    console.log("calleremail:", callerId);
+    console.log("receiveremail:", receiverId);
+    console.log("senderemail:", senderEmail);
+    console.log("receiveremail:", receiverEmail);
 
     const socket = new SockJS("http://15.164.249.16:8080/ws/chat");
     const client = over(socket);
@@ -44,8 +50,6 @@ const ChatWindow = ({
         console.log("✅ WebSocket 연결됨", frame);
 
         const subscribePath = `/sub/chat/room/${callHistoryId}`;
-        console.log("path:", subscribePath);
-
         client.subscribe(subscribePath, (message) => {
           try {
             if (!message.body) return;
@@ -80,21 +84,21 @@ const ChatWindow = ({
       return;
     }
 
-    if (!callerId || !receiverId) {
-      alert("❌ callerId 또는 receiverId가 없습니다.");
+    if (!senderEmail || !receiverEmail) {
+      alert("❌ senderEmail 또는 receiverEmail이 없습니다.");
       return;
     }
 
     const chatMessage = {
       callHistoryId: Number(callHistoryId),
-      senderId: callerId,
-      receiverId: receiverId, // 그냥 receiverId 사용
+      senderEmail,
+      receiverEmail,
       messageType: "TEXT",
       messageContent: messageInput,
       createdAt: new Date().toISOString(),
     };
     stompClient.send("/pub/chat/send", {}, JSON.stringify(chatMessage));
-    setMessages((prev) => [...prev, chatMessage]); // ✅ 여기서만 사용
+    // setMessages((prev) => [...prev, chatMessage]); // ✅ 여기서만 사용
     setMessageInput("");
   };
 
@@ -134,11 +138,11 @@ const ChatWindow = ({
 
         <ChatBox>
           {messages.map((msg, idx) => {
-            const isMe = msg.senderId === callerId;
+            const isMe = msg.senderEmail === senderEmail;
             return (
-              <ChatRow key={idx} $isMe={isMe}>
+              <ChatRow key={idx} isMe={isMe}>
                 <div>
-                  <ChatBubble $isMe={isMe}>{msg.messageContent}</ChatBubble>
+                  <ChatBubble isMe={isMe}>{msg.messageContent}</ChatBubble>
                 </div>
               </ChatRow>
             );
@@ -253,7 +257,7 @@ const ChatBox = styled.div`
 
 const ChatRow = styled.div`
   display: flex;
-  justify-content: ${(props) => (props.$isMe ? "flex-end" : "flex-start")};
+  justify-content: ${(props) => (props.isMe ? "flex-end" : "flex-start")};
   width: 100%;
   margin-bottom: 10px;
 `;
@@ -263,9 +267,9 @@ const ChatBubble = styled.div`Add commentMore actions
   padding: 10px 14px;
   margin-bottom: 8px;
   border-radius: 18px;
-  background-color: ${(props) => (props.$isMe ? "#fff" : "#fff")};
-  color: ${(props) => (props.$isMe ? "#000" : "#000")};
-  align-self: ${(props) => (props.$isMe ? "flex-end" : "flex-start")};
+  background-color: ${(props) => (props.isMe ? "#fff" : "#fff")};
+  color: ${(props) => (props.isMe ? "#000" : "#000")};
+  align-self: ${(props) => (props.isMe ? "flex-end" : "flex-start")};
   max-width: 70%;
   word-break: break-word;
   white-space: pre-wrap;

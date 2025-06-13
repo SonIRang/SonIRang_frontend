@@ -131,6 +131,7 @@ function MainPage() {
     navigate("/meeting", {
       state: {
         incoming: true,
+        callerId: useremail,
         receiverId: incomingCallData.from, // 수신자 ID 추가
         offer: incomingCallData.data,
       },
