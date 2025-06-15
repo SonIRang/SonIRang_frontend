@@ -36,8 +36,8 @@ const ChatWindow = ({
     }
 
     console.log("💬 callHistoryId 확인:", callHistoryId);
-    console.log("calleremail:", callerId);
-    console.log("receiveremail:", receiverId);
+    console.log("callerId:", callerId);
+    console.log("receiveId:", receiverId);
     console.log("senderemail:", senderEmail);
     console.log("receiveremail:", receiverEmail);
 
