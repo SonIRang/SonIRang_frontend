@@ -19,7 +19,7 @@ const ChatWindow = ({
   const email = localStorage.getItem("useremail");
   const accessToken = localStorage.getItem("generalAccessToken");
   const senderEmail = localStorage.getItem("useremail") || ""; // caller 이메일
-  let receiverEmail = localStorage.getItem("receiverEmail") || "";
+  let receiverEmail = receiverId || "";
   if (receiverEmail === senderEmail) {
     receiverEmail = localStorage.getItem("callerEmail");
   }
