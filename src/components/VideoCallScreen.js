@@ -8,7 +8,7 @@ import {
   HandLandmarker,
 } from "@mediapipe/tasks-vision";
 
-const VideoCallScreen = ({ setCallHistoryId }) => {
+const VideoCallScreen = ({ setCallHistoryId, setCallerId, setReceiverId }) => {
   const navigate = useNavigate();
 
   const location = useLocation();
@@ -139,7 +139,7 @@ handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
 
 const sendDataToServer = async (data) => {
   try {
-    await fetch('/api/landmark', {
+    await fetch('http://15.164.249.16:8080/api/landmark', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -152,7 +152,7 @@ const sendDataToServer = async (data) => {
 
 const sendCallhistoryId = async (data) => {
   try {
-    await fetch('/api/landmark/prepare', {
+    await fetch('http://15.164.249.16:8080/api/landmark/prepare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -424,6 +424,12 @@ const startCamera = async () => {
             // 💡 callHistoryId를 부모에서 내려준 setCallHistoryId를 호출해서 저장
             if (setCallHistoryId) {
               setCallHistoryId(data.callHistoryId);
+            }
+            if (setCallerId && data.callerId) {
+              setCallerId(data.callerId);
+            }
+            if (setReceiverId && data.receiverId) {
+              setReceiverId(data.receiverId);
             }
             sendCallhistoryId({ callHistoryId: data.callHistoryId, senderEmail: location.state?.callerId });
             break;
